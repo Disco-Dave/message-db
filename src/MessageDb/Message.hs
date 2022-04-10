@@ -6,6 +6,8 @@ module MessageDb.Message (
   StreamPosition (..),
   GlobalPosition (..),
   CreatedAtTimestamp (..),
+  Payload (..),
+  Metadata (..),
   Message (..),
 ) where
 
@@ -128,8 +130,8 @@ data Message = Message
   , messageType :: MessageType
   , streamPosition :: StreamPosition
   , globalPosition :: GlobalPosition
-  , payload :: Payload
-  , metadata :: Metadata
+  , payload :: Maybe Payload
+  , metadata :: Maybe Metadata
   , createdAtTimestamp :: CreatedAtTimestamp
   }
   deriving (Show, Eq, Ord, Generic)

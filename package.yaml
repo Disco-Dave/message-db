@@ -18,6 +18,7 @@ ghc-options:
 
 default-extensions:
   - DataKinds
+  - DeriveGeneric
   - FlexibleContexts
   - GeneralizedNewtypeDeriving
   - MultiParamTypeClasses
@@ -26,8 +27,8 @@ default-extensions:
   - RecordWildCards
   - StrictData
   - TypeApplications
+  - TypeFamilies
   - TypeOperators
-  - DeriveGeneric
 
 dependencies:
   - base >= 4.7 && < 5
@@ -57,4 +58,16 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
+      - aeson
+      - bytestring
+      - directory
+      - exceptions
+      - filepath
       - message-db
+      - mtl
+      - postgresql-simple
+      - text
+      - time
+      - transformers
+      - unliftio
+      - uuid
