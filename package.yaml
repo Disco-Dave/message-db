@@ -42,6 +42,7 @@ library:
     - exceptions
     - filepath
     - mtl
+    - parsec
     - postgresql-simple
     - text
     - time

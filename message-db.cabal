@@ -16,6 +16,7 @@ library
       MessageDb.Entity
       MessageDb.Functions
       MessageDb.Message
+      MessageDb.StreamName
   other-modules:
       Paths_message_db
   hs-source-dirs:
@@ -42,6 +43,7 @@ library
     , exceptions
     , filepath
     , mtl
+    , parsec
     , postgresql-simple
     , text
     , time

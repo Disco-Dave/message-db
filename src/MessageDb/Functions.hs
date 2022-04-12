@@ -88,6 +88,7 @@ writeMessage ::
   Maybe ExpectedVersion ->
   IO (Message.MessageId, Message.StreamPosition)
 writeMessage connection streamName messageType payload metadata expectedVersion = do
+  -- TODO Throw specific exception when expected version check fails
   messageId <- Message.newMessageId
 
   let query =
