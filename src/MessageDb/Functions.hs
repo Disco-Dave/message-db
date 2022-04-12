@@ -24,12 +24,13 @@ import Database.PostgreSQL.Simple.FromRow (RowParser, field)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
+import qualified MessageDb.StreamName as StreamName
 import Numeric.Natural (Natural)
 
 newtype ExpectedVersion = ExpectedVersion
   { fromExpectedVersion :: Message.StreamPosition
   }
-  deriving (Show, Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, Num)
+  deriving (Show, Eq, Ord)
 
 data ConsumerGroup = ConsumerGroup
   { consumerGroupMember :: Natural
@@ -66,7 +67,7 @@ batchSizeToInteger batchSize =
 messageParser :: RowParser Message
 messageParser = do
   messageId <- fmap Message.MessageId field
-  streamName <- fmap Message.StreamName field
+  streamName <- undefined -- TODO fmap Message.StreamName field
   messageType <- fmap Message.MessageType field
   streamPosition <- fmap Message.StreamPosition field
   globalPosition <- fmap Message.GlobalPosition field
@@ -104,7 +105,7 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
         |]
       params =
         ( UUID.toText $ Message.fromMessageId messageId
-        , Message.fromStreamName streamName
+        , StreamName.toText streamName
         , Message.fromMessageType messageType
         , Aeson.toJSON payload
         , fmap Aeson.toJSON metadata
@@ -144,7 +145,7 @@ getStreamMessages connection streamName position batchSize condition =
           );
         |]
       params =
-        ( Message.fromStreamName streamName
+        ( StreamName.toText streamName
         , maybe 0 Message.fromStreamPosition position
         , maybe 1000 batchSizeToInteger batchSize
         , fmap fromCondition condition
@@ -213,7 +214,7 @@ getLastStreamMessage connection streamName =
           );
         |]
       params =
-        Postgres.Only (Message.fromStreamName streamName)
+        Postgres.Only (StreamName.toText streamName)
    in listToMaybe <$> Postgres.queryWith messageParser connection query params
 
 -- | Highest position number in the stream.
@@ -226,7 +227,7 @@ streamVersion connection streamName = do
           );
         |]
       params =
-        Postgres.Only (Message.fromStreamName streamName)
+        Postgres.Only (StreamName.toText streamName)
 
   result <- Postgres.query connection query params
 
