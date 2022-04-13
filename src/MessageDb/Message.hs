@@ -16,7 +16,13 @@ import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.UUID (UUID)
 import qualified Data.UUID.V4 as UUID.V4
+import Database.PostgreSQL.Simple.FromField (FromField)
+import qualified Database.PostgreSQL.Simple.FromField as FromField
+import Database.PostgreSQL.Simple.ToField (ToField)
+import qualified Database.PostgreSQL.Simple.ToField as ToField
 import MessageDb.StreamName (StreamName (..))
+
+-- * Message Ids musut be unique per message across the entire event store.
 
 -- | Identifier of a message record
 newtype MessageId = MessageId
@@ -29,11 +35,37 @@ newMessageId :: IO MessageId
 newMessageId =
   fmap MessageId UUID.V4.nextRandom
 
+instance Aeson.ToJSON MessageId where
+  toJSON = Aeson.toJSON . fromMessageId
+  toEncoding = Aeson.toEncoding . fromMessageId
+
+instance Aeson.FromJSON MessageId where
+  parseJSON = fmap MessageId . Aeson.parseJSON
+
+instance ToField MessageId where
+  toField = ToField.toField . fromMessageId
+
+instance FromField MessageId where
+  fromField = fmap (fmap MessageId) . FromField.fromField
+
 -- | The type of the message
 newtype MessageType = MessageType
   { fromMessageType :: Text
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
+
+instance Aeson.ToJSON MessageType where
+  toJSON = Aeson.toJSON . fromMessageType
+  toEncoding = Aeson.toEncoding . fromMessageType
+
+instance Aeson.FromJSON MessageType where
+  parseJSON = fmap MessageType . Aeson.parseJSON
+
+instance ToField MessageType where
+  toField = ToField.toField . fromMessageType
+
+instance FromField MessageType where
+  fromField = fmap (fmap MessageType) . FromField.fromField
 
 -- | The ordinal position of the message in its stream. Position is gapless.
 newtype StreamPosition = StreamPosition
