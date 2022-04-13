@@ -1,168 +1,99 @@
--- | Captures the rules and structure described on the eventide website here: http://docs.eventide-project.org/core-concepts/streams/stream-names.html#entity-stream-name
 module MessageDb.StreamName (
-  -- * Stream Segment
-  StreamNameSegment,
-  segmentFromText,
-  segmentToText,
-
-  -- * Stream Name
   StreamName (..),
-  toText,
-  fromText,
+  CategoryName,
+  category,
+  fromCategoryName,
+  IdentityName,
+  identity,
+  fromIdentityName,
+  all,
 ) where
 
-import Control.Monad (when)
 import qualified Data.Aeson as Aeson
-import Data.Bifunctor (first)
-import Data.Function (on)
-import Data.List (intercalate, nub, (\\))
+import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Database.PostgreSQL.Simple.FromField (FromField)
 import qualified Database.PostgreSQL.Simple.FromField as FromField
 import Database.PostgreSQL.Simple.ToField (ToField)
 import qualified Database.PostgreSQL.Simple.ToField as ToField
-import qualified Text.Parsec as Parsec
-import qualified Text.Parsec.Error as ParsecError
-import Text.Parsec.Text (Parser)
+import Prelude hiding (all)
 
-newtype StreamNameSegment = StreamNameSegment Text
-  deriving (Show, Eq, Ord)
-
-segmentToText :: StreamNameSegment -> Text
-segmentToText (StreamNameSegment text) =
-  text
-
-entitySeparator :: Char
-entitySeparator = '-'
-
-commandSeparator :: Char
-commandSeparator = ':'
-
-positionSeparator :: Char
-positionSeparator = '+'
-
-separators :: String
-separators =
-  [ entitySeparator
-  , commandSeparator
-  , positionSeparator
-  ]
-
-segmentFromText :: Text -> Maybe StreamNameSegment
-segmentFromText text =
-  let stripped = Text.strip text
-      errorChecks =
-        let isEmpty =
-              Text.null stripped
-            containsInvalidCharacters =
-              Text.any (`elem` separators) stripped
-         in [isEmpty, containsInvalidCharacters]
-   in if or errorChecks
-        then Nothing
-        else Just (StreamNameSegment stripped)
-
-instance Aeson.ToJSON StreamNameSegment where
-  toJSON = Aeson.toJSON . segmentToText
-  toEncoding = Aeson.toEncoding . segmentToText
-
-instance Aeson.FromJSON StreamNameSegment where
-  parseJSON = Aeson.withText "StreamNameSegment" $ \text ->
-    case segmentFromText text of
-      Just segment -> pure segment
-      Nothing -> fail "Malformed stream name segment"
-
-instance ToField StreamNameSegment where
-  toField = ToField.toField . segmentToText
-
-instance FromField StreamNameSegment where
-  fromField field value = do
-    text <- FromField.fromField field value
-    case segmentFromText text of
-      Just segment -> pure segment
-      Nothing -> FromField.returnError FromField.ConversionFailed field "Malformed stream name segment"
-
-data StreamName = StreamName
-  { category :: StreamNameSegment
-  , command :: Maybe StreamNameSegment
-  , entity :: Maybe StreamNameSegment
-  , position :: Maybe StreamNameSegment
+newtype StreamName = StreamName
+  { fromStreamName :: Text
   }
-  deriving (Show, Eq)
-
-toText :: StreamName -> Text
-toText StreamName{..} =
-  let optional separator value =
-        maybe "" (Text.cons separator . segmentToText) value
-   in mconcat
-        [ segmentToText category
-        , optional commandSeparator command
-        , optional entitySeparator entity
-        , optional positionSeparator position
-        ]
-
-segmentParser :: Parser StreamNameSegment
-segmentParser = do
-  characters <- Parsec.many1 (Parsec.satisfy (not . (`elem` separators)))
-  pure . StreamNameSegment $ Text.pack characters
-
-separatorParser :: String -> Parser Char
-separatorParser selectedSeperators =
-  Parsec.satisfy (`elem` selectedSeperators)
-
-streamNameParser :: Parser StreamName
-streamNameParser = do
-  category <- segmentParser
-
-  otherSegments <- Parsec.many $ do
-    segmentType <- separatorParser separators
-    segmentValue <- segmentParser
-    pure (segmentType, segmentValue)
-
-  let originalSegments = fmap fst otherSegments
-      uniqueSegments = nub originalSegments
-   in when (length originalSegments /= length uniqueSegments) $
-        let duplicatedSeparators = nub $ originalSegments \\ uniqueSegments
-            separatorCsv = intercalate ", " (fmap pure duplicatedSeparators)
-         in fail $ "Duplicate stream name segment(s) detected: " <> separatorCsv
-
-  let select separator =
-        lookup separator otherSegments
-
-  pure
-    StreamName
-      { category = category
-      , command = select commandSeparator
-      , entity = select entitySeparator
-      , position = select positionSeparator
-      }
-
-fromText :: Text -> Either Text StreamName
-fromText =
-  let parseErrorToText parseError =
-        let messages = ParsecError.errorMessages parseError
-         in mconcat $ fmap (Text.pack . ParsecError.messageString) messages
-   in first parseErrorToText . Parsec.parse streamNameParser "" . Text.strip
-
-instance Ord StreamName where
-  compare = on compare toText
+  deriving (Show, Eq, Ord, IsString)
 
 instance Aeson.ToJSON StreamName where
-  toJSON = Aeson.toJSON . toText
-  toEncoding = Aeson.toEncoding . toText
+  toJSON = Aeson.toJSON . fromStreamName
+  toEncoding = Aeson.toEncoding . fromStreamName
 
 instance Aeson.FromJSON StreamName where
-  parseJSON = Aeson.withText "StreamName" $ \text ->
-    case fromText text of
-      Right name -> pure name
-      Left err -> fail $ show err
+  parseJSON = fmap StreamName . Aeson.parseJSON
 
 instance ToField StreamName where
-  toField = ToField.toField . toText
+  toField = ToField.toField . fromStreamName
 
 instance FromField StreamName where
-  fromField field value = do
-    text <- FromField.fromField field value
-    case fromText text of
-      Right name -> pure name
-      Left err -> FromField.returnError FromField.ConversionFailed field (show err)
+  fromField = fmap (fmap StreamName) . FromField.fromField
+
+separator :: Char
+separator = '-'
+
+newtype CategoryName = CategoryName Text
+  deriving (Show, Eq, Ord)
+
+fromCategoryName :: CategoryName -> Text
+fromCategoryName (CategoryName text) =
+  text
+
+category :: StreamName -> CategoryName
+category (StreamName text) =
+  case Text.split (== separator) text of
+    (name : _) -> CategoryName name
+    _ -> CategoryName "" -- Empty category means all streams I think
+
+all :: CategoryName
+all =
+  CategoryName ""
+
+instance Aeson.ToJSON CategoryName where
+  toJSON = Aeson.toJSON . fromCategoryName
+  toEncoding = Aeson.toEncoding . fromCategoryName
+
+instance Aeson.FromJSON CategoryName where
+  parseJSON = fmap CategoryName . Aeson.parseJSON
+
+instance ToField CategoryName where
+  toField = ToField.toField . fromCategoryName
+
+instance FromField CategoryName where
+  fromField = fmap (fmap CategoryName) . FromField.fromField
+
+newtype IdentityName = IdentityName Text
+  deriving (Show, Eq, Ord)
+
+fromIdentityName :: IdentityName -> Text
+fromIdentityName (IdentityName text) =
+  text
+
+identity :: StreamName -> Maybe IdentityName
+identity (StreamName text) =
+  let separatorText = Text.pack [separator]
+      value = Text.intercalate separatorText . drop 1 $ Text.split (== separator) text
+   in if Text.null value
+        then Nothing
+        else Just $ IdentityName value
+
+instance Aeson.ToJSON IdentityName where
+  toJSON = Aeson.toJSON . fromIdentityName
+  toEncoding = Aeson.toEncoding . fromIdentityName
+
+instance Aeson.FromJSON IdentityName where
+  parseJSON = fmap IdentityName . Aeson.parseJSON
+
+instance ToField IdentityName where
+  toField = ToField.toField . fromIdentityName
+
+instance FromField IdentityName where
+  fromField = fmap (fmap IdentityName) . FromField.fromField

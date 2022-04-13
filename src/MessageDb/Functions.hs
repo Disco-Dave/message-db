@@ -6,7 +6,6 @@ module MessageDb.Functions (
   BatchSize (..),
   Condition (..),
   ConsumerGroup (..),
-  CategoryName (..),
   writeMessage,
   getStreamMessages,
   getCategoryMessages,
@@ -24,7 +23,6 @@ import Database.PostgreSQL.Simple.FromRow (RowParser, field)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
-import qualified MessageDb.StreamName as StreamName
 import Numeric.Natural (Natural)
 
 newtype ExpectedVersion = ExpectedVersion
@@ -37,11 +35,6 @@ data ConsumerGroup = ConsumerGroup
   , consumerGroupSize :: Natural
   }
   deriving (Show, Eq)
-
-newtype CategoryName = CategoryName
-  { fromCategoryName :: Text
-  }
-  deriving (Show, Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
 
 newtype Condition = Condition
   { fromCondition :: Text
@@ -105,7 +98,7 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
         |]
       params =
         ( UUID.toText $ Message.fromMessageId messageId
-        , StreamName.toText streamName
+        , Message.fromStreamName streamName
         , Message.fromMessageType messageType
         , Aeson.toJSON payload
         , fmap Aeson.toJSON metadata
@@ -145,7 +138,7 @@ getStreamMessages connection streamName position batchSize condition =
           );
         |]
       params =
-        ( StreamName.toText streamName
+        ( Message.fromStreamName streamName
         , maybe 0 Message.fromStreamPosition position
         , maybe 1000 batchSizeToInteger batchSize
         , fmap fromCondition condition
@@ -155,7 +148,7 @@ getStreamMessages connection streamName position batchSize condition =
 -- | Retrieve messages from a category of streams, optionally specifying the starting position, the number of messages to retrieve, the correlation category for Pub/Sub, consumer group parameters, and an additional condition that will be appended to the SQL command's WHERE clause.
 getCategoryMessages ::
   Postgres.Connection ->
-  CategoryName ->
+  Message.CategoryName ->
   Maybe Message.GlobalPosition ->
   Maybe BatchSize ->
   Maybe Correlation ->
@@ -185,7 +178,7 @@ getCategoryMessages connection category position batchSize correlation consumerG
           );
         |]
       params =
-        ( fromCategoryName category
+        ( Message.fromCategoryName category
         , maybe 0 Message.fromGlobalPosition position
         , maybe 1000 batchSizeToInteger batchSize
         , fmap fromCorrelation correlation
@@ -214,7 +207,7 @@ getLastStreamMessage connection streamName =
           );
         |]
       params =
-        Postgres.Only (StreamName.toText streamName)
+        Postgres.Only (Message.fromStreamName streamName)
    in listToMaybe <$> Postgres.queryWith messageParser connection query params
 
 -- | Highest position number in the stream.
@@ -227,7 +220,7 @@ streamVersion connection streamName = do
           );
         |]
       params =
-        Postgres.Only (StreamName.toText streamName)
+        Postgres.Only (Message.fromStreamName streamName)
 
   result <- Postgres.query connection query params
 

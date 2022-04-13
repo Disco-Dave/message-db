@@ -7,11 +7,18 @@ module MessageDb.Message (
   CreatedAtTimestamp (..),
   Payload (..),
   Metadata (..),
-  StreamName (..),
   Message (..),
+  StreamName (..),
+  StreamName.all,
+  StreamName.CategoryName,
+  StreamName.fromCategoryName,
+  StreamName.category,
+  StreamName.IdentityName,
+  StreamName.identity,
+  StreamName.fromIdentityName,
 ) where
 
-import Data.Aeson ((.:), (.=), (.:?))
+import Data.Aeson ((.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Text (Text)
 import Data.Time (UTCTime)
@@ -22,16 +29,13 @@ import qualified Database.PostgreSQL.Simple.FromField as FromField
 import Database.PostgreSQL.Simple.ToField (ToField)
 import qualified Database.PostgreSQL.Simple.ToField as ToField
 import MessageDb.StreamName (StreamName (..))
+import qualified MessageDb.StreamName as StreamName
 
--- * Message Ids musut be unique per message across the entire event store.
-
--- | Identifier of a message record
 newtype MessageId = MessageId
   { fromMessageId :: UUID
   }
   deriving (Show, Eq, Ord)
 
--- | Make a new unique 'MessageId'
 newMessageId :: IO MessageId
 newMessageId =
   fmap MessageId UUID.V4.nextRandom
@@ -49,7 +53,6 @@ instance ToField MessageId where
 instance FromField MessageId where
   fromField = fmap (fmap MessageId) . FromField.fromField
 
--- | The type of the message
 newtype MessageType = MessageType
   { fromMessageType :: Text
   }
@@ -68,7 +71,6 @@ instance ToField MessageType where
 instance FromField MessageType where
   fromField = fmap (fmap MessageType) . FromField.fromField
 
--- | The ordinal position of the message in its stream. Position is gapless.
 newtype StreamPosition = StreamPosition
   { fromStreamPosition :: Integer
   }
