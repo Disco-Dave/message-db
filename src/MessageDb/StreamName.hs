@@ -47,15 +47,15 @@ fromCategoryName :: CategoryName -> Text
 fromCategoryName (CategoryName text) =
   text
 
+all :: CategoryName
+all =
+  CategoryName ""
+
 category :: StreamName -> CategoryName
 category (StreamName text) =
   case Text.split (== separator) text of
     (name : _) -> CategoryName name
-    _ -> CategoryName "" -- Empty category means all streams I think
-
-all :: CategoryName
-all =
-  CategoryName ""
+    _ -> all -- 'Text.split' never returns an empty list
 
 instance Aeson.ToJSON CategoryName where
   toJSON = Aeson.toJSON . fromCategoryName

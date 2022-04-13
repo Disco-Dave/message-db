@@ -7,6 +7,9 @@ module MessageDb.Message (
   CreatedAtTimestamp (..),
   Payload (..),
   Metadata (..),
+  Typed (..),
+  typedPayload,
+  typedMetadata,
   Message (..),
   StreamName (..),
   StreamName.all,
@@ -20,6 +23,8 @@ module MessageDb.Message (
 
 import Data.Aeson ((.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as AesonTypes
+import Data.Coerce (coerce)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.UUID (UUID)
@@ -177,7 +182,30 @@ data Message = Message
   }
   deriving (Show, Eq)
 
-toKeyValues :: Aeson.KeyValue kv => Message -> [kv]
+data Typed value
+  = TypedValue value
+  | TypedNull
+  | TypedError String
+  deriving (Show, Eq)
+
+typed :: Aeson.FromJSON value => Maybe Aeson.Value -> Typed value
+typed column =
+  case column of
+    Nothing -> TypedNull
+    Just json ->
+      case AesonTypes.parseEither Aeson.parseJSON (coerce json) of
+        Left err -> TypedError err
+        Right value -> TypedValue value
+
+typedPayload :: Aeson.FromJSON payload => Message -> Typed payload
+typedPayload Message{payload} =
+  typed $ coerce payload
+
+typedMetadata :: Aeson.FromJSON metadata => Message -> Typed metadata
+typedMetadata Message{metadata} =
+  typed $ coerce metadata
+
+toKeyValues :: Aeson.KeyValue keyValue => Message -> [keyValue]
 toKeyValues Message{..} =
   [ "id" .= messageId
   , "streamName" .= streamName
