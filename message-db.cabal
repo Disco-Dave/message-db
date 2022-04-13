@@ -15,7 +15,10 @@ library
       MessageDb.Entity
       MessageDb.Functions
       MessageDb.Message
+      MessageDb.Read
       MessageDb.StreamName
+      MessageDb.Subscribe
+      MessageDb.Write
   other-modules:
       Paths_message_db
   hs-source-dirs:
