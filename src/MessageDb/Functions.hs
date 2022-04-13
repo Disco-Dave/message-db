@@ -66,14 +66,14 @@ batchSizeToInteger batchSize =
 
 messageParser :: RowParser Message
 messageParser = do
-  messageId <- fmap Message.MessageId field
-  streamName <- undefined -- TODO fmap Message.StreamName field
-  messageType <- fmap Message.MessageType field
-  streamPosition <- fmap Message.StreamPosition field
-  globalPosition <- fmap Message.GlobalPosition field
-  payload <- fmap (fmap Message.Payload) field
-  metadata <- fmap (fmap Message.Metadata) field
-  createdAtTimestamp <- fmap Message.CreatedAtTimestamp field
+  messageId <- field
+  streamName <- field
+  messageType <- field
+  streamPosition <- field
+  globalPosition <- field
+  payload <- field
+  metadata <- field
+  createdAtTimestamp <- field
   pure Message{..}
 
 -- | Write a JSON-formatted message to a named stream, optionally specifying JSON-formatted metadata and an expected version number.

@@ -11,6 +11,7 @@ module MessageDb.Message (
   Message (..),
 ) where
 
+import Data.Aeson ((.:), (.=), (.:?))
 import qualified Data.Aeson as Aeson
 import Data.Text (Text)
 import Data.Time (UTCTime)
@@ -73,11 +74,37 @@ newtype StreamPosition = StreamPosition
   }
   deriving (Show, Eq, Ord)
 
+instance Aeson.ToJSON StreamPosition where
+  toJSON = Aeson.toJSON . fromStreamPosition
+  toEncoding = Aeson.toEncoding . fromStreamPosition
+
+instance Aeson.FromJSON StreamPosition where
+  parseJSON = fmap StreamPosition . Aeson.parseJSON
+
+instance ToField StreamPosition where
+  toField = ToField.toField . fromStreamPosition
+
+instance FromField StreamPosition where
+  fromField = fmap (fmap StreamPosition) . FromField.fromField
+
 -- | Primary key. The ordinal position of the message in the entire message store. Global position may have gaps.
 newtype GlobalPosition = GlobalPosition
   { fromGlobalPosition :: Integer
   }
   deriving (Show, Eq, Ord)
+
+instance Aeson.ToJSON GlobalPosition where
+  toJSON = Aeson.toJSON . fromGlobalPosition
+  toEncoding = Aeson.toEncoding . fromGlobalPosition
+
+instance Aeson.FromJSON GlobalPosition where
+  parseJSON = fmap GlobalPosition . Aeson.parseJSON
+
+instance ToField GlobalPosition where
+  toField = ToField.toField . fromGlobalPosition
+
+instance FromField GlobalPosition where
+  fromField = fmap (fmap GlobalPosition) . FromField.fromField
 
 -- | Message payload
 newtype Payload = Payload
@@ -85,17 +112,56 @@ newtype Payload = Payload
   }
   deriving (Show, Eq)
 
+instance Aeson.ToJSON Payload where
+  toJSON = Aeson.toJSON . fromPayload
+  toEncoding = Aeson.toEncoding . fromPayload
+
+instance Aeson.FromJSON Payload where
+  parseJSON = fmap Payload . Aeson.parseJSON
+
+instance ToField Payload where
+  toField = ToField.toField . fromPayload
+
+instance FromField Payload where
+  fromField = fmap (fmap Payload) . FromField.fromField
+
 -- | Message metadata
 newtype Metadata = Metadata
   { fromMetadata :: Aeson.Value
   }
   deriving (Show, Eq)
 
+instance Aeson.ToJSON Metadata where
+  toJSON = Aeson.toJSON . fromMetadata
+  toEncoding = Aeson.toEncoding . fromMetadata
+
+instance Aeson.FromJSON Metadata where
+  parseJSON = fmap Metadata . Aeson.parseJSON
+
+instance ToField Metadata where
+  toField = ToField.toField . fromMetadata
+
+instance FromField Metadata where
+  fromField = fmap (fmap Metadata) . FromField.fromField
+
 -- | Timestamp when the message was written.
 newtype CreatedAtTimestamp = CreatedAtTimestamp
   { fromCreatedAtTimestamp :: UTCTime
   }
   deriving (Show, Eq, Ord)
+
+instance Aeson.ToJSON CreatedAtTimestamp where
+  toJSON = Aeson.toJSON . fromCreatedAtTimestamp
+  toEncoding = Aeson.toEncoding . fromCreatedAtTimestamp
+
+instance Aeson.FromJSON CreatedAtTimestamp where
+  parseJSON = fmap CreatedAtTimestamp . Aeson.parseJSON
+
+instance ToField CreatedAtTimestamp where
+  toField = ToField.toField . fromCreatedAtTimestamp
+
+instance FromField CreatedAtTimestamp where
+  fromField = fmap (fmap CreatedAtTimestamp) . FromField.fromField
 
 data Message = Message
   { messageId :: MessageId
@@ -108,3 +174,31 @@ data Message = Message
   , createdAtTimestamp :: CreatedAtTimestamp
   }
   deriving (Show, Eq)
+
+toKeyValues :: Aeson.KeyValue kv => Message -> [kv]
+toKeyValues Message{..} =
+  [ "id" .= messageId
+  , "streamName" .= streamName
+  , "type" .= messageType
+  , "streamPosition" .= streamPosition
+  , "globalPosition" .= globalPosition
+  , "payload" .= payload
+  , "metadata" .= metadata
+  , "createdAtTimestamp" .= createdAtTimestamp
+  ]
+
+instance Aeson.ToJSON Message where
+  toJSON = Aeson.object . toKeyValues
+  toEncoding = Aeson.pairs . mconcat . toKeyValues
+
+instance Aeson.FromJSON Message where
+  parseJSON = Aeson.withObject "Message" $ \object -> do
+    messageId <- object .: "id"
+    streamName <- object .: "streamName"
+    messageType <- object .: "type"
+    streamPosition <- object .: "streamPosition"
+    globalPosition <- object .: "globalPosition"
+    payload <- object .:? "payload"
+    metadata <- object .:? "metadata"
+    createdAtTimestamp <- object .: "createdAtTimestamp"
+    pure Message{..}
