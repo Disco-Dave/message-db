@@ -41,9 +41,11 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , directory
     , exceptions
     , filepath
+    , immortal
     , mtl
     , parsec
     , postgresql-simple

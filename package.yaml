@@ -38,9 +38,11 @@ library:
   dependencies:
     - aeson
     - bytestring
+    - containers
     - directory
     - exceptions
     - filepath
+    - immortal
     - mtl
     - parsec
     - postgresql-simple

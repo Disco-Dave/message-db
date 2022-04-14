@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module MessageDb.Message (
   MessageId (..),
   newMessageId,
@@ -7,7 +9,6 @@ module MessageDb.Message (
   CreatedAtTimestamp (..),
   Payload (..),
   Metadata (..),
-  Typed (..),
   typedPayload,
   typedMetadata,
   Message (..),
@@ -25,6 +26,7 @@ import Data.Aeson ((.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
 import Data.Coerce (coerce)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.UUID (UUID)
@@ -182,26 +184,16 @@ data Message = Message
   }
   deriving (Show, Eq)
 
-data Typed value
-  = TypedValue value
-  | TypedNull
-  | TypedError String
-  deriving (Show, Eq)
-
-typed :: Aeson.FromJSON value => Maybe Aeson.Value -> Typed value
+typed :: Aeson.FromJSON value => Maybe Aeson.Value -> Either String value
 typed column =
-  case column of
-    Nothing -> TypedNull
-    Just json ->
-      case AesonTypes.parseEither Aeson.parseJSON (coerce json) of
-        Left err -> TypedError err
-        Right value -> TypedValue value
+  let json = fromMaybe (Aeson.toJSON @(Maybe ()) Nothing) (coerce column)
+   in AesonTypes.parseEither Aeson.parseJSON json
 
-typedPayload :: Aeson.FromJSON payload => Message -> Typed payload
+typedPayload :: Aeson.FromJSON payload => Message -> Either String payload
 typedPayload Message{payload} =
   typed $ coerce payload
 
-typedMetadata :: Aeson.FromJSON metadata => Message -> Typed metadata
+typedMetadata :: Aeson.FromJSON metadata => Message -> Either String metadata
 typedMetadata Message{metadata} =
   typed $ coerce metadata
 
