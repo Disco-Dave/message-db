@@ -1,15 +1,26 @@
-module MessageDb.Subscribe where
+module MessageDb.Subscribe (
+  SubscriberId (..),
+  Subscription (..),
+  subscribe,
+  ParseException (..),
+  registerAnything,
+  register,
+  start,
+) where
 
-import Control.Exception (Exception, SomeException, throwIO)
+import Control.Concurrent (threadDelay)
+import Control.Exception (Exception, throwIO)
+import qualified Control.Immortal as Immortal
+import Control.Monad (void)
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.String (IsString)
 import Data.Text (Text)
-import MessageDb.Functions
-import MessageDb.Message
-import MessageDb.StreamName
+import MessageDb.Functions ()
+import MessageDb.Message (CategoryName, Message, MessageType, typedMetadata, typedPayload)
+import MessageDb.StreamName ()
 import Numeric.Natural (Natural)
 
 newtype SubscriberId = SubscriberId
@@ -17,28 +28,25 @@ newtype SubscriberId = SubscriberId
   }
   deriving (Show, Eq, Ord, IsString)
 
-data SubscriptionSettings = SubscriptionSettings
+data Subscription = Subscription
   { subscriberId :: SubscriberId
   , categoryName :: CategoryName
   , messagesPerTick :: Natural
-  , positionUpdateInterval :: Natural
-  , tickIntervalMs :: Natural
+  , positionUpdateIntervalMessages :: Natural
+  , tickIntervalMicroseconds :: Natural
+  , handlers :: Map MessageType [Message -> IO ()]
   }
 
-defaultSettings :: SubscriberId -> CategoryName -> SubscriptionSettings
-defaultSettings subscriberId categoryName =
-  SubscriptionSettings
+subscribe :: SubscriberId -> CategoryName -> Subscription
+subscribe subscriberId categoryName =
+  Subscription
     { subscriberId = subscriberId
     , categoryName = categoryName
     , messagesPerTick = 100
-    , positionUpdateInterval = 100
-    , tickIntervalMs = 100
+    , positionUpdateIntervalMessages = 100
+    , tickIntervalMicroseconds = 100
+    , handlers = Map.empty
     }
-
-data Subscription = Subscription
-  { settings :: SubscriptionSettings
-  , handlers :: Map MessageType [Message -> IO ()]
-  }
 
 newtype ParseException = ParseException String
   deriving (Show)
@@ -65,5 +73,10 @@ register messageType handle handlers =
         handle payload metadata
    in registerAnything messageType messageHandler handlers
 
+poll :: Subscription -> IO ()
+poll Subscription{..} = do
+  threadDelay (fromIntegral tickIntervalMicroseconds)
+
 start :: Subscription -> IO ()
-start subscription = undefined
+start subscription =
+  void $ Immortal.create (\_ -> poll subscription)
