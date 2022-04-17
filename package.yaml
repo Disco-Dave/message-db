@@ -24,6 +24,7 @@ default-extensions:
   - MultiParamTypeClasses
   - NamedFieldPuns
   - OverloadedStrings
+  - RankNTypes
   - RecordWildCards
   - StrictData
   - TypeApplications

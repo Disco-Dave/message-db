@@ -31,6 +31,7 @@ library
       MultiParamTypeClasses
       NamedFieldPuns
       OverloadedStrings
+      RankNTypes
       RecordWildCards
       StrictData
       TypeApplications
@@ -72,6 +73,7 @@ test-suite message-db-test
       MultiParamTypeClasses
       NamedFieldPuns
       OverloadedStrings
+      RankNTypes
       RecordWildCards
       StrictData
       TypeApplications

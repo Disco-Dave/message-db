@@ -5,7 +5,7 @@ module MessageDb.Entity (
 
 -- | An entity is a structure that is the result of combining one or more events from a stream.
 class Entity entity where
-  -- Event initializing the stream
+  -- Event initializing the stream. If you don't want to use it then just set it to same type as Event.
   type InitialEvent entity
 
   -- | An event represents a fact in the past.
