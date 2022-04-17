@@ -6,6 +6,8 @@ module MessageDb.Functions (
   BatchSize (..),
   Condition (..),
   ConsumerGroup (..),
+  lookupById,
+  lookupByPosition,
   writeMessage,
   getStreamMessages,
   getCategoryMessages,
@@ -68,6 +70,48 @@ messageParser = do
   metadata <- field
   createdAtTimestamp <- field
   pure Message{..}
+
+lookupById :: Postgres.Connection -> Message.MessageId -> IO (Maybe Message)
+lookupById connection messageId = do
+  let query =
+        [sql|
+          SELECT 
+            id::uuid
+            ,stream_name
+            ,type
+            ,position
+            ,global_position
+            ,data::jsonb
+            ,metadata::jsonb
+            ,time::timestamptz
+          FROM message_store.messages
+          WHERE id = ?;
+        |]
+
+  messages <- Postgres.queryWith messageParser connection query (Postgres.Only messageId)
+
+  pure $ listToMaybe messages
+
+lookupByPosition :: Postgres.Connection -> Message.GlobalPosition -> IO (Maybe Message)
+lookupByPosition connection position = do
+  let query =
+        [sql|
+          SELECT 
+            id::uuid
+            ,stream_name
+            ,type
+            ,position
+            ,global_position
+            ,data::jsonb
+            ,metadata::jsonb
+            ,time::timestamptz
+          FROM message_store.messages
+          WHERE global_position = ?;
+        |]
+
+  messages <- Postgres.queryWith messageParser connection query (Postgres.Only position)
+
+  pure $ listToMaybe messages
 
 -- | Write a JSON-formatted message to a named stream, optionally specifying JSON-formatted metadata and an expected version number.
 writeMessage ::
