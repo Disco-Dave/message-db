@@ -1,4 +1,4 @@
-module MessageDb.Message.Typed (
+module MessageDb.TypedMessage (
   TypedMessage (..),
   ConversionFailure (..),
   typed,
@@ -22,8 +22,7 @@ data TypedMessage payload metadata = TypedMessage
   deriving (Show, Eq)
 
 data ConversionFailure = ConversionFailure
-  { failedMessage :: Message
-  , failedPayloadReason :: Maybe String
+  { failedPayloadReason :: Maybe String
   , failedMetadataReason :: Maybe String
   }
   deriving (Show, Eq)
@@ -48,7 +47,6 @@ typed message =
       let toMaybe = either Just (const Nothing)
        in Left $
             ConversionFailure
-              { failedMessage = message
-              , failedPayloadReason = toMaybe payloadResult
+              { failedPayloadReason = toMaybe payloadResult
               , failedMetadataReason = toMaybe metadataResult
               }

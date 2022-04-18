@@ -4,27 +4,18 @@ module MessageDb.Subscribe (
   NumberOfMessages (..),
   Microseconds (..),
   Subscription (..),
-  subscribe,
-  ParseException (..),
-  typedHandler,
-  registerAnything,
-  register,
   start,
 ) where
 
 import Control.Concurrent (threadDelay)
-import Control.Exception (Exception, throwIO)
 import qualified Control.Immortal as Immortal
 import Control.Monad (void)
-import Data.Aeson (FromJSON)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.String (IsString)
 import Data.Text (Text)
 import qualified Database.PostgreSQL.Simple as Postgres
 import MessageDb.Functions ()
-import MessageDb.Message (CategoryName, GlobalPosition (GlobalPosition), Message, MessageType, typedMetadata, typedPayload)
+import MessageDb.Handlers (Handlers)
+import MessageDb.Message (CategoryName, GlobalPosition)
 import MessageDb.StreamName ()
 import Numeric.Natural (Natural)
 
@@ -54,42 +45,8 @@ data Subscription = Subscription
   , messagesPerTick :: NumberOfMessages
   , positionUpdateInterval :: NumberOfMessages
   , tickInterval :: Microseconds
-  , handlers :: Map MessageType [Message -> IO ()]
+  , handlers :: Handlers () (IO ())
   }
-
-subscribe :: SubscriberId -> CategoryName -> Subscription
-subscribe subscriberId categoryName =
-  Subscription
-    { subscriberId = subscriberId
-    , categoryName = categoryName
-    , startPosition = RestorePosition
-    , messagesPerTick = 100
-    , positionUpdateInterval = 100
-    , tickInterval = 100
-    , handlers = Map.empty
-    }
-
-typedHandler :: (FromJSON payload, FromJSON metadata) => (payload -> metadata -> IO ()) -> Message -> IO ()
-typedHandler untypedHandler message = do
-  let parseOrThrow = either (throwIO . ParseException) pure
-  payload <- parseOrThrow $ typedPayload message
-  metadata <- parseOrThrow $ typedMetadata message
-  untypedHandler payload metadata
-
-newtype ParseException = ParseException String deriving (Show)
-instance Exception ParseException
-
-registerAnything :: MessageType -> (Message -> IO ()) -> Subscription -> Subscription
-registerAnything messageType handle subscription =
-  let addHandler oldHandlers =
-        Just $ handle : fromMaybe [] oldHandlers
-   in subscription
-        { handlers = Map.alter addHandler messageType (handlers subscription)
-        }
-
-register :: (FromJSON payload, FromJSON metadata) => MessageType -> (payload -> metadata -> IO ()) -> Subscription -> Subscription
-register messageType handler =
-  registerAnything messageType (typedHandler handler)
 
 poll :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO ()
 poll withConnection Subscription{..} = do

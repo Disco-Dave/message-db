@@ -12,14 +12,14 @@ build-type:     Simple
 
 library
   exposed-modules:
-      MessageDb.Entity
       MessageDb.Functions
+      MessageDb.Handlers
       MessageDb.Message
-      MessageDb.Message.Typed
       MessageDb.Publish
       MessageDb.Read
       MessageDb.StreamName
       MessageDb.Subscribe
+      MessageDb.TypedMessage
   other-modules:
       Paths_message_db
   hs-source-dirs:
