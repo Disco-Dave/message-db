@@ -184,18 +184,18 @@ data Message = Message
   }
   deriving (Show, Eq)
 
-typed :: Aeson.FromJSON value => Maybe Aeson.Value -> Either String value
-typed column =
+typedField :: Aeson.FromJSON value => Maybe Aeson.Value -> Either String value
+typedField column =
   let json = fromMaybe (Aeson.toJSON @(Maybe ()) Nothing) (coerce column)
    in AesonTypes.parseEither Aeson.parseJSON json
 
 typedPayload :: Aeson.FromJSON payload => Message -> Either String payload
 typedPayload Message{payload} =
-  typed $ coerce payload
+  typedField $ coerce payload
 
 typedMetadata :: Aeson.FromJSON metadata => Message -> Either String metadata
 typedMetadata Message{metadata} =
-  typed $ coerce metadata
+  typedField $ coerce metadata
 
 toKeyValues :: Aeson.KeyValue keyValue => Message -> [keyValue]
 toKeyValues Message{..} =

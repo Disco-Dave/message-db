@@ -15,6 +15,7 @@ library
       MessageDb.Entity
       MessageDb.Functions
       MessageDb.Message
+      MessageDb.Message.Typed
       MessageDb.Publish
       MessageDb.Read
       MessageDb.StreamName
