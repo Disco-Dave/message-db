@@ -1,6 +1,7 @@
 module MessageDb.Handlers (
   Handler,
   TypedHandler,
+  NoState,
   AnyPayload,
   AnyMetadata,
   Handlers,
@@ -28,6 +29,7 @@ instance Exception Error
 type Handler state output = Message -> state -> Either Error output
 type TypedHandler state output payload metadata = TypedMessage payload metadata -> state -> output
 
+type NoState = ()
 type AnyPayload = Maybe Payload
 type AnyMetadata = Maybe Metadata
 

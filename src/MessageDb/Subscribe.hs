@@ -14,7 +14,7 @@ import Data.String (IsString)
 import Data.Text (Text)
 import qualified Database.PostgreSQL.Simple as Postgres
 import MessageDb.Functions ()
-import MessageDb.Handlers (Handlers)
+import MessageDb.Handlers (Handlers, NoState)
 import MessageDb.Message (CategoryName, GlobalPosition)
 import MessageDb.StreamName ()
 import Numeric.Natural (Natural)
@@ -45,7 +45,7 @@ data Subscription = Subscription
   , messagesPerTick :: NumberOfMessages
   , positionUpdateInterval :: NumberOfMessages
   , tickInterval :: Microseconds
-  , handlers :: Handlers () (IO ())
+  , handlers :: Handlers NoState (IO ())
   }
 
 poll :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO ()
