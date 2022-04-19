@@ -81,7 +81,7 @@ instance FromField MessageType where
 newtype StreamPosition = StreamPosition
   { fromStreamPosition :: Integer
   }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Num)
 
 instance Aeson.ToJSON StreamPosition where
   toJSON = Aeson.toJSON . fromStreamPosition
@@ -100,7 +100,7 @@ instance FromField StreamPosition where
 newtype GlobalPosition = GlobalPosition
   { fromGlobalPosition :: Integer
   }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Num)
 
 instance Aeson.ToJSON GlobalPosition where
   toJSON = Aeson.toJSON . fromGlobalPosition

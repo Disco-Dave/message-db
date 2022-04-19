@@ -15,8 +15,8 @@ library
       MessageDb.Functions
       MessageDb.Handlers
       MessageDb.Message
+      MessageDb.Project
       MessageDb.Publish
-      MessageDb.Read
       MessageDb.StreamName
       MessageDb.Subscribe
       MessageDb.TypedMessage

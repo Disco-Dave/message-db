@@ -5,7 +5,7 @@ module MessageDb.Handlers (
   AnyPayload,
   AnyMetadata,
   Handlers,
-  Error (..),
+  HandleError (..),
   empty,
   attach,
   detach,
@@ -20,13 +20,13 @@ import qualified Data.Map.Strict as Map
 import MessageDb.Message (Message, MessageType, Metadata, Payload)
 import MessageDb.TypedMessage (ConversionFailure, TypedMessage, typed)
 
-data Error
-  = MessageConversionError ConversionFailure
-  | MessageHandlerNotFound
+data HandleError
+  = MessageConversionFailure Message ConversionFailure
+  | MessageHandlerNotFound Message
   deriving (Show, Eq)
-instance Exception Error
+instance Exception HandleError
 
-type Handler state output = Message -> state -> Either Error output
+type Handler state output = Message -> state -> Either HandleError output
 type TypedHandler state output payload metadata = TypedMessage payload metadata -> state -> output
 
 type NoState = ()
@@ -47,7 +47,7 @@ attach ::
   Handlers state output
 attach messageType typedHandler (Handlers handlers) =
   let handler message state = do
-        typedMessage <- first MessageConversionError $ typed message
+        typedMessage <- first (MessageConversionFailure message) $ typed message
         pure $ typedHandler typedMessage state
    in Handlers $ Map.insert messageType handler handlers
 
@@ -59,6 +59,6 @@ handle :: MessageType -> Handlers state output -> Handler state output
 handle messageType (Handlers handlers) message state =
   case Map.lookup messageType handlers of
     Nothing ->
-      Left MessageHandlerNotFound
+      Left $ MessageHandlerNotFound message
     Just untypedHandler ->
       untypedHandler message state
