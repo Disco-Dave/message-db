@@ -28,7 +28,7 @@ type ProjectionHandlers entity = Handlers entity entity
 
 data Projection entity = Projection
   { initial :: entity
-  , handlers :: Handlers entity entity
+  , handlers :: ProjectionHandlers entity
   }
 
 emptyHandlers :: ProjectionHandlers entity
@@ -53,21 +53,26 @@ project Projection{..} messages = do
 
   foldM applyHandler initial (toList messages)
 
-fetch :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Functions.BatchSize -> StreamName -> Projection entity -> IO entity
+fetch :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Functions.BatchSize -> StreamName -> Projection entity -> IO (Maybe entity)
 fetch withConnection batchSize streamName projection =
   let query position currentProjection = do
-        messages <- withConnection $ \conn ->
-          Functions.getStreamMessages conn streamName (Just position) (Just batchSize) Nothing
+        messages <- withConnection $ \connection ->
+          Functions.getStreamMessages connection streamName (Just position) (Just batchSize) Nothing
 
         case messages of
           (firstMessage : otherMessages) -> do
             let nonEmptyMessages = firstMessage :| otherMessages
-                nextPosition = streamPosition (NonEmpty.last nonEmptyMessages) + 1
 
-            nextEntity <- either throwIO pure $ project currentProjection nonEmptyMessages
+            entity <- either throwIO pure $ project currentProjection nonEmptyMessages
 
-            query nextPosition $
-              currentProjection{initial = nextEntity}
+            if batchSize == Functions.Unlimited
+              then pure $ Just entity
+              else
+                let nextPosition = streamPosition (NonEmpty.last nonEmptyMessages) + 1
+                 in query nextPosition $ currentProjection{initial = entity}
           _ ->
-            pure $ initial currentProjection
+            pure $
+              if batchSize == Functions.Unlimited
+                then Nothing
+                else Just $ initial currentProjection
    in query 0 projection
