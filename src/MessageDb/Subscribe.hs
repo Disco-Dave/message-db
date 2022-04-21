@@ -3,6 +3,10 @@ module MessageDb.Subscribe (
   StartPosition (..),
   NumberOfMessages (..),
   Microseconds (..),
+  SubscriptionHandlers,
+  attachHandler,
+  detachHandler,
+  emptyHandlers,
   Subscription (..),
   start,
 ) where
@@ -10,14 +14,20 @@ module MessageDb.Subscribe (
 import Control.Concurrent (threadDelay)
 import qualified Control.Immortal as Immortal
 import Control.Monad (void)
+import Data.Aeson (FromJSON)
+import Data.Function ((&))
+import Data.List.NonEmpty (NonEmpty)
 import Data.String (IsString)
 import Data.Text (Text)
 import qualified Database.PostgreSQL.Simple as Postgres
 import MessageDb.Functions ()
 import MessageDb.Handlers (Handlers, NoState)
-import MessageDb.Message (CategoryName, GlobalPosition)
+import qualified MessageDb.Handlers as Handlers
+import MessageDb.Message (CategoryName, GlobalPosition, Message (Message), MessageType (MessageType))
 import MessageDb.StreamName ()
+import MessageDb.TypedMessage (TypedMessage)
 import Numeric.Natural (Natural)
+import qualified MessageDb.Functions as Functions
 
 newtype SubscriberId = SubscriberId
   { fromSubscriberId :: Text
@@ -38,6 +48,21 @@ newtype Microseconds = Microseconds
   }
   deriving (Show, Eq, Ord, Num)
 
+type SubscriptionHandlers = Handlers NoState (IO ())
+
+emptyHandlers :: SubscriptionHandlers
+emptyHandlers =
+  Handlers.empty
+
+attachHandler :: (FromJSON payload, FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> IO ()) -> SubscriptionHandlers -> SubscriptionHandlers
+attachHandler messageType handler =
+  Handlers.attach messageType $ \typedMessage _ ->
+    handler typedMessage
+
+detachHandler :: MessageType -> SubscriptionHandlers -> SubscriptionHandlers
+detachHandler =
+  Handlers.detach
+
 data Subscription = Subscription
   { subscriberId :: SubscriberId
   , categoryName :: CategoryName
@@ -45,14 +70,15 @@ data Subscription = Subscription
   , messagesPerTick :: NumberOfMessages
   , positionUpdateInterval :: NumberOfMessages
   , tickInterval :: Microseconds
+  , logHandler :: NonEmpty Message -> IO ()
   , handlers :: Handlers NoState (IO ())
   }
 
-poll :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO ()
-poll withConnection Subscription{..} = do
-  threadDelay (fromIntegral (fromMicroseconds tickInterval))
-
 start :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO ()
-start withConnection subscription =
-  void . Immortal.create $ \_ ->
-    poll withConnection subscription
+start withConnection Subscription{..} = do
+  let poll position = do
+        messages <- Functions.getCategoryMessages
+
+        threadDelay (fromIntegral (fromMicroseconds tickInterval))
+
+  poll startPosition

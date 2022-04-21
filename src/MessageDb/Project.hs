@@ -1,5 +1,5 @@
 module MessageDb.Project (
-  ProjectionHandlers,
+  ProjectHandlers,
   Projection (..),
   Functions.BatchSize (..),
   emptyHandlers,
@@ -24,23 +24,23 @@ import qualified MessageDb.Message as Message
 import MessageDb.StreamName (StreamName)
 import MessageDb.TypedMessage (TypedMessage)
 
-type ProjectionHandlers entity = Handlers entity entity
+type ProjectHandlers entity = Handlers entity entity
 
-data Projection entity = Projection
-  { initial :: entity
-  , handlers :: ProjectionHandlers entity
-  }
-
-emptyHandlers :: ProjectionHandlers entity
+emptyHandlers :: ProjectHandlers entity
 emptyHandlers = Handlers.empty
 
-attachHandler :: (FromJSON payload, FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> entity -> entity) -> ProjectionHandlers entity -> ProjectionHandlers entity
+attachHandler :: (FromJSON payload, FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> entity -> entity) -> ProjectHandlers entity -> ProjectHandlers entity
 attachHandler =
   Handlers.attach
 
-detachHandler :: MessageType -> ProjectionHandlers entity -> ProjectionHandlers entity
+detachHandler :: MessageType -> ProjectHandlers entity -> ProjectHandlers entity
 detachHandler =
   Handlers.detach
+
+data Projection entity = Projection
+  { initial :: entity
+  , handlers :: ProjectHandlers entity
+  }
 
 project :: Projection entity -> NonEmpty Message -> Either HandleError entity
 project Projection{..} messages = do
