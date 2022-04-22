@@ -34,6 +34,7 @@ library
       OverloadedStrings
       RankNTypes
       RecordWildCards
+      NumericUnderscores
       StrictData
       TypeApplications
       TypeFamilies
@@ -51,10 +52,11 @@ library
     , mtl
     , parsec
     , postgresql-simple
+    , safe-exceptions
     , text
     , time
     , transformers
-    , unliftio
+    , unliftio-core
     , uuid
   default-language: Haskell2010
 
@@ -76,6 +78,7 @@ test-suite message-db-test
       OverloadedStrings
       RankNTypes
       RecordWildCards
+      NumericUnderscores
       StrictData
       TypeApplications
       TypeFamilies

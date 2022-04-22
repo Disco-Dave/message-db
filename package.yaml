@@ -26,6 +26,7 @@ default-extensions:
   - OverloadedStrings
   - RankNTypes
   - RecordWildCards
+  - NumericUnderscores
   - StrictData
   - TypeApplications
   - TypeFamilies
@@ -47,10 +48,11 @@ library:
     - mtl
     - parsec
     - postgresql-simple
+    - safe-exceptions
     - text
     - time
     - transformers
-    - unliftio
+    - unliftio-core
     - uuid
 
 tests:

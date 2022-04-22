@@ -6,6 +6,7 @@ module MessageDb.Functions (
   BatchSize (..),
   Condition (..),
   ConsumerGroup (..),
+  Correlation (..),
   lookupById,
   lookupByPosition,
   writeMessage,
