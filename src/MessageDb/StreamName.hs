@@ -22,7 +22,7 @@ import Prelude hiding (all)
 newtype StreamName = StreamName
   { fromStreamName :: Text
   }
-  deriving (Show, Eq, Ord, IsString)
+  deriving (Show, Eq, Ord, IsString, Semigroup)
 
 instance Aeson.ToJSON StreamName where
   toJSON = Aeson.toJSON . fromStreamName

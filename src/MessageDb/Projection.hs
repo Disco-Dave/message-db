@@ -9,7 +9,7 @@ module MessageDb.Projection (
   fetch,
 ) where
 
-import Control.Exception (throwIO)
+import Control.Exception.Safe (throwIO)
 import Control.Monad (foldM)
 import Data.Aeson (FromJSON)
 import Data.Foldable (toList)
