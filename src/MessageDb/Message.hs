@@ -27,6 +27,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
 import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
+import Data.String (IsString)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.UUID (UUID)
@@ -63,7 +64,7 @@ instance FromField MessageId where
 newtype MessageType = MessageType
   { fromMessageType :: Text
   }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, IsString)
 
 instance Aeson.ToJSON MessageType where
   toJSON = Aeson.toJSON . fromMessageType

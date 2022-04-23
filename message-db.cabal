@@ -15,10 +15,10 @@ library
       MessageDb.Functions
       MessageDb.Handlers
       MessageDb.Message
-      MessageDb.Project
+      MessageDb.Projection
       MessageDb.Publish
       MessageDb.StreamName
-      MessageDb.Subscribe
+      MessageDb.Subscription
       MessageDb.TypedMessage
   other-modules:
       Paths_message_db
@@ -48,9 +48,7 @@ library
     , directory
     , exceptions
     , filepath
-    , immortal
     , mtl
-    , parsec
     , postgresql-simple
     , safe-exceptions
     , text

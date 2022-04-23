@@ -44,9 +44,7 @@ library:
     - directory
     - exceptions
     - filepath
-    - immortal
     - mtl
-    - parsec
     - postgresql-simple
     - safe-exceptions
     - text

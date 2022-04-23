@@ -1,4 +1,4 @@
-module MessageDb.Project (
+module MessageDb.Projection (
   ProjectHandlers,
   Projection (..),
   Functions.BatchSize (..),
