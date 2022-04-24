@@ -19,6 +19,8 @@ library
       MessageDb.Publish
       MessageDb.StreamName
       MessageDb.Subscription
+      MessageDb.Subscription.FailedMessage
+      MessageDb.Subscription.Handlers
       MessageDb.TypedMessage
   other-modules:
       Paths_message_db
