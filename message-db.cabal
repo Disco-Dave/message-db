@@ -24,7 +24,9 @@ library
       MessageDb.Subscription.FailedMessage
       MessageDb.Subscription.FailureStrategy
       MessageDb.Subscription.Handlers
+      MessageDb.Subscription.PositionStrategy
       MessageDb.TypedMessage
+      MessageDb.Units
   other-modules:
       Paths_message_db
   hs-source-dirs:

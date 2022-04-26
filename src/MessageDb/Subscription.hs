@@ -1,74 +1,40 @@
 module MessageDb.Subscription
-  ( SubscriberId (..)
-  , StartPosition (..)
-  , NumberOfMessages (..)
-  , Microseconds (..)
-  , Subscription (..)
-  , subscribe
-  , start
-  , retryFailures
+  ( Subscription (..),
+    subscribe,
+    start,
   )
 where
 
 import Control.Concurrent (threadDelay)
-import Control.Exception.Safe (SomeException, handleAny, throwIO, withException)
-import Control.Monad (void, when)
+import Control.Exception.Safe (tryAny)
+import Control.Monad (when)
+import Data.Bifunctor (first)
 import Data.Foldable (traverse_)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe (fromMaybe)
-import Data.String (IsString)
-import Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.UUID as UUID
-import qualified Data.UUID.V4 as UUID.V4
 import Data.Void (Void)
-import qualified Database.PostgreSQL.Simple as Postgres
 import MessageDb.Functions ()
 import qualified MessageDb.Functions as Functions
-import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
 import MessageDb.StreamName ()
-import MessageDb.Subscription.FailedMessage (failMessage)
-import qualified MessageDb.Subscription.FailedMessage as FailedMessage
+import MessageDb.Subscription.FailureStrategy (FailureStrategy)
+import qualified MessageDb.Subscription.FailureStrategy as FailureStrategy
 import MessageDb.Subscription.Handlers (SubscriptionHandlers)
 import qualified MessageDb.Subscription.Handlers as SubscriptionHandlers
-import Numeric.Natural (Natural)
-
-
-newtype NumberOfMessages = NumberOfMessages
-  { fromNumberOfMessage :: Natural
-  }
-  deriving (Show, Eq, Ord, Num)
-
-
-newtype Microseconds = Microseconds
-  { fromMicroseconds :: Natural
-  }
-  deriving (Show, Eq, Ord, Num)
-
-
-newtype SubscriberId = SubscriberId
-  { fromSubscriberId :: Text
-  }
-  deriving (Show, Eq, Ord, IsString, Semigroup)
-
-
-data StartPosition
-  = RestorePosition
-  | SpecificPosition Message.GlobalPosition
+import MessageDb.Subscription.PositionStrategy (PositionStrategy)
+import qualified MessageDb.Subscription.PositionStrategy as PositionStrategy
+import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
 
 
 data Subscription = Subscription
-  { subscriberId :: SubscriberId
-  , categoryName :: Message.CategoryName
-  , startPosition :: StartPosition
+  { categoryName :: Message.CategoryName
   , messagesPerTick :: NumberOfMessages
-  , positionUpdateInterval :: NumberOfMessages
   , tickInterval :: Microseconds
   , logMessages :: NonEmpty Message -> IO ()
-  , logException :: Message -> SomeException -> IO ()
+  , failureStrategy :: FailureStrategy
+  , positionStrategy :: PositionStrategy
   , handlers :: SubscriptionHandlers
   , consumerGroup :: Maybe Functions.ConsumerGroup
   , condition :: Maybe Functions.Condition
@@ -76,88 +42,29 @@ data Subscription = Subscription
   }
 
 
-subscribe :: SubscriberId -> Message.CategoryName -> Subscription
-subscribe subscriberId categoryName =
+subscribe :: Message.CategoryName -> Subscription
+subscribe categoryName =
   Subscription
-    { subscriberId = subscriberId
-    , categoryName = categoryName
-    , startPosition = RestorePosition
+    { categoryName = categoryName
     , messagesPerTick = 100
-    , positionUpdateInterval = 100
     , tickInterval = 100_000
     , logMessages = \_ -> pure ()
-    , logException = \_ _ -> pure ()
+    , failureStrategy = FailureStrategy.ignoreFailures
+    , positionStrategy = PositionStrategy.dontSave
+    , handlers = SubscriptionHandlers.empty
     , consumerGroup = Nothing
     , condition = Nothing
     , correlation = Nothing
-    , handlers = SubscriptionHandlers.empty
     }
 
 
-positionStreamName :: SubscriberId -> Maybe Functions.ConsumerGroup -> Message.StreamName
-positionStreamName subscriberId consumerGroup =
-  Message.StreamName $
-    let groupIdentifier =
-          Text.pack $ case consumerGroup of
-            Nothing -> ""
-            Just Functions.ConsumerGroup{..} ->
-              "(" <> show consumerGroupMember <> "," <> show consumerGroupSize <> ")"
-     in "_position-" <> fromSubscriberId subscriberId <> groupIdentifier
+start :: Functions.WithConnection -> Subscription -> IO Void
+start withConnection Subscription{..} = do
+  let sleep :: IO ()
+      sleep =
+        threadDelay (fromIntegral (fromMicroseconds tickInterval))
 
-
-savePosition :: Postgres.Connection -> SubscriberId -> Maybe Functions.ConsumerGroup -> Message.GlobalPosition -> IO ()
-savePosition connection subscriberId consumerGroup position =
-  void $
-    Functions.writeMessage @Message.GlobalPosition @()
-      connection
-      (positionStreamName subscriberId consumerGroup)
-      "GlobalPositionSaved"
-      position
-      Nothing
-      Nothing
-
-
-queryStartingPosition :: Postgres.Connection -> SubscriberId -> Maybe Functions.ConsumerGroup -> IO Message.GlobalPosition
-queryStartingPosition connection subscriberId consumerGroup = do
-  maybeMessage <-
-    Functions.getLastStreamMessage connection (positionStreamName subscriberId consumerGroup)
-
-  pure $ case fmap Message.typedPayload maybeMessage of
-    Just (Right position) -> position
-    _ -> 0
-
-
-failuresStreamName :: SubscriberId -> Message.CategoryName
-failuresStreamName subscriberId =
-  Message.category . Message.StreamName $ "_failures_" <> fromSubscriberId subscriberId
-
-
-saveFailure :: Postgres.Connection -> SubscriberId -> Message -> SomeException -> IO ()
-saveFailure connection subscriberId message exception = do
-  identifier <-
-    case Message.identity (Message.streamName message) of
-      Nothing ->
-        fmap (Message.StreamName . UUID.toText) UUID.V4.nextRandom
-      Just identifier ->
-        pure . Message.StreamName $ Message.fromIdentityName identifier
-
-  let streamName =
-        let category = Message.StreamName . Message.fromCategoryName $ failuresStreamName subscriberId
-         in category <> "-" <> identifier
-
-  void $
-    Functions.writeMessage
-      connection
-      streamName
-      "FailedMessage"
-      (failMessage message exception)
-      (Nothing :: Maybe ())
-      Nothing
-
-
-runSubscription :: (Message -> Message) -> SubscriberId -> (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO Void
-runSubscription mapMessage failedSubscriberId withConnection Subscription{..} = do
-  let queryCategory :: Message.GlobalPosition -> IO (Maybe (NonEmpty Message))
+      queryCategory :: Message.GlobalPosition -> IO (Maybe (NonEmpty Message))
       queryCategory position =
         fmap NonEmpty.nonEmpty . withConnection $ \connection ->
           Functions.getCategoryMessages
@@ -169,22 +76,20 @@ runSubscription mapMessage failedSubscriberId withConnection Subscription{..} = 
             consumerGroup
             condition
 
-      sleep :: IO ()
-      sleep =
-        threadDelay (fromIntegral (fromMicroseconds tickInterval))
-
       handle :: Message -> IO ()
-      handle message =
-        let logExceptions = handleAny (logException message)
+      handle message = do
+        result <-
+          case SubscriptionHandlers.handle (Message.messageType message) handlers message of
+            Left err ->
+              pure . Left $ FailureStrategy.HandleFailure err
+            Right effect ->
+              first FailureStrategy.UnknownFailure <$> tryAny effect
 
-            saveFailedMessage exception =
-              withConnection $ \connection ->
-                saveFailure connection failedSubscriberId message exception
-
-            handleExceptions action = logExceptions $ withException action saveFailedMessage
-         in handleExceptions $ case Handlers.handle (Message.messageType message) handlers message () of
-              Left handleError -> throwIO handleError
-              Right effect -> effect
+        case result of
+          Right () ->
+            pure ()
+          Left reason ->
+            FailureStrategy.logFailure failureStrategy message reason
 
       processMessages :: Maybe (NonEmpty Message) -> IO (NumberOfMessages, Maybe Message.GlobalPosition)
       processMessages maybeMessages =
@@ -199,51 +104,23 @@ runSubscription mapMessage failedSubscriberId withConnection Subscription{..} = 
               )
 
       poll :: Message.GlobalPosition -> Message.GlobalPosition -> IO Void
-      poll currentPosition lastPositionSaved = do
-        messages <- queryCategory currentPosition
+      poll initialPosition lastPositionSaved = do
+        messages <- queryCategory initialPosition
 
-        (numberOfMessages, lastPosition) <- processMessages (fmap mapMessage <$> messages)
+        (numberOfMessages, currentPosition) <- processMessages messages
 
         positionSaved <-
-          let position = fromMaybe currentPosition lastPosition
-              interval = fromIntegral $ fromNumberOfMessage positionUpdateInterval
-              difference = Message.fromGlobalPosition $ position - lastPositionSaved
-           in if difference < interval
-                then pure Nothing
-                else do
-                  withConnection $ \connection ->
-                    savePosition connection subscriberId consumerGroup position
-
-                  pure $ Just position
+          PositionStrategy.save
+            positionStrategy
+            lastPositionSaved
+            (fromMaybe initialPosition currentPosition)
 
         when (numberOfMessages < messagesPerTick) sleep
 
         poll
-          (maybe currentPosition (+ 1) lastPosition)
+          (maybe initialPosition (+ 1) currentPosition)
           (fromMaybe lastPositionSaved positionSaved)
 
-  actualStartingPosition <-
-    case startPosition of
-      SpecificPosition position -> pure position
-      RestorePosition -> withConnection $ \connection ->
-        queryStartingPosition connection subscriberId consumerGroup
+  startingPosition <- PositionStrategy.restore positionStrategy
 
-  poll actualStartingPosition actualStartingPosition
-
-
-start :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO Void
-start withConnection subscription@Subscription{..} =
-  runSubscription id subscriberId withConnection subscription
-
-
-retryFailures :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO Void
-retryFailures withConnection subscription@Subscription{..} =
-  let fromFailedMessage message =
-        case Message.typedPayload message of
-          Left _ -> message
-          Right failure -> FailedMessage.message failure
-   in runSubscription fromFailedMessage subscriberId withConnection $
-        subscription
-          { subscriberId = "_failures_" <> subscriberId
-          , categoryName = failuresStreamName subscriberId
-          }
+  poll startingPosition startingPosition

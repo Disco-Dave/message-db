@@ -1,6 +1,6 @@
 module MessageDb.Subscription.FailureStrategy
   ( FailureReason (..),
-    FailureStrategy,
+    FailureStrategy (..),
     ignoreFailures,
     writeToCategory,
     writeUnknownFailuresToCategory,

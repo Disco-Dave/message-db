@@ -7,9 +7,8 @@ module MessageDb.Subscription.Handlers
   )
 where
 
-import Control.Exception.Safe (throwIO)
 import qualified Data.Aeson as Aeson
-import MessageDb.Handlers (Handlers, NoState)
+import MessageDb.Handlers (Handlers, NoState, HandleError)
 import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message, MessageType)
 import MessageDb.TypedMessage (TypedMessage)
@@ -34,8 +33,6 @@ detach =
   Handlers.detach
 
 
-handle :: MessageType -> SubscriptionHandlers -> Message -> IO ()
+handle :: MessageType -> SubscriptionHandlers -> Message -> Either HandleError (IO ())
 handle messageType handlers message =
-  case Handlers.handle messageType handlers message () of
-    Left handleError -> throwIO handleError
-    Right effect -> effect
+  Handlers.handle messageType handlers message ()
