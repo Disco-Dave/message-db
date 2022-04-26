@@ -107,19 +107,19 @@ start withConnection Subscription{..} = do
       poll initialPosition lastPositionSaved = do
         messages <- queryCategory initialPosition
 
-        (numberOfMessages, currentPosition) <- processMessages messages
+        (numberOfMessages, lastMessagePosition) <- processMessages messages
+
+        let currentPosition = fromMaybe initialPosition lastMessagePosition
 
         positionSaved <-
           PositionStrategy.save
             positionStrategy
             lastPositionSaved
-            (fromMaybe initialPosition currentPosition)
+            currentPosition
 
         when (numberOfMessages < messagesPerTick) sleep
 
-        poll
-          (maybe initialPosition (+ 1) currentPosition)
-          (fromMaybe lastPositionSaved positionSaved)
+        poll currentPosition (fromMaybe lastPositionSaved positionSaved)
 
   startingPosition <- PositionStrategy.restore positionStrategy
 
