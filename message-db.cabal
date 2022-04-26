@@ -16,10 +16,13 @@ library
       MessageDb.Handlers
       MessageDb.Message
       MessageDb.Projection
+      MessageDb.Projection.FailureStrategy
+      MessageDb.Projection.Handlers
       MessageDb.Publish
       MessageDb.StreamName
       MessageDb.Subscription
       MessageDb.Subscription.FailedMessage
+      MessageDb.Subscription.FailureStrategy
       MessageDb.Subscription.Handlers
       MessageDb.TypedMessage
   other-modules:

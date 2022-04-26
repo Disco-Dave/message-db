@@ -1,13 +1,14 @@
-module MessageDb.Subscription (
-  SubscriberId (..),
-  StartPosition (..),
-  NumberOfMessages (..),
-  Microseconds (..),
-  Subscription (..),
-  subscribe,
-  start,
-  retryFailures,
-) where
+module MessageDb.Subscription
+  ( SubscriberId (..)
+  , StartPosition (..)
+  , NumberOfMessages (..)
+  , Microseconds (..)
+  , Subscription (..)
+  , subscribe
+  , start
+  , retryFailures
+  )
+where
 
 import Control.Concurrent (threadDelay)
 import Control.Exception.Safe (SomeException, handleAny, throwIO, withException)
@@ -35,24 +36,29 @@ import MessageDb.Subscription.Handlers (SubscriptionHandlers)
 import qualified MessageDb.Subscription.Handlers as SubscriptionHandlers
 import Numeric.Natural (Natural)
 
+
 newtype NumberOfMessages = NumberOfMessages
   { fromNumberOfMessage :: Natural
   }
   deriving (Show, Eq, Ord, Num)
+
 
 newtype Microseconds = Microseconds
   { fromMicroseconds :: Natural
   }
   deriving (Show, Eq, Ord, Num)
 
+
 newtype SubscriberId = SubscriberId
   { fromSubscriberId :: Text
   }
   deriving (Show, Eq, Ord, IsString, Semigroup)
 
+
 data StartPosition
   = RestorePosition
   | SpecificPosition Message.GlobalPosition
+
 
 data Subscription = Subscription
   { subscriberId :: SubscriberId
@@ -68,6 +74,7 @@ data Subscription = Subscription
   , condition :: Maybe Functions.Condition
   , correlation :: Maybe Functions.Correlation
   }
+
 
 subscribe :: SubscriberId -> Message.CategoryName -> Subscription
 subscribe subscriberId categoryName =
@@ -86,6 +93,7 @@ subscribe subscriberId categoryName =
     , handlers = SubscriptionHandlers.empty
     }
 
+
 positionStreamName :: SubscriberId -> Maybe Functions.ConsumerGroup -> Message.StreamName
 positionStreamName subscriberId consumerGroup =
   Message.StreamName $
@@ -95,6 +103,7 @@ positionStreamName subscriberId consumerGroup =
             Just Functions.ConsumerGroup{..} ->
               "(" <> show consumerGroupMember <> "," <> show consumerGroupSize <> ")"
      in "_position-" <> fromSubscriberId subscriberId <> groupIdentifier
+
 
 savePosition :: Postgres.Connection -> SubscriberId -> Maybe Functions.ConsumerGroup -> Message.GlobalPosition -> IO ()
 savePosition connection subscriberId consumerGroup position =
@@ -107,6 +116,7 @@ savePosition connection subscriberId consumerGroup position =
       Nothing
       Nothing
 
+
 queryStartingPosition :: Postgres.Connection -> SubscriberId -> Maybe Functions.ConsumerGroup -> IO Message.GlobalPosition
 queryStartingPosition connection subscriberId consumerGroup = do
   maybeMessage <-
@@ -116,9 +126,11 @@ queryStartingPosition connection subscriberId consumerGroup = do
     Just (Right position) -> position
     _ -> 0
 
+
 failuresStreamName :: SubscriberId -> Message.CategoryName
 failuresStreamName subscriberId =
   Message.category . Message.StreamName $ "_failures_" <> fromSubscriberId subscriberId
+
 
 saveFailure :: Postgres.Connection -> SubscriberId -> Message -> SomeException -> IO ()
 saveFailure connection subscriberId message exception = do
@@ -141,6 +153,7 @@ saveFailure connection subscriberId message exception = do
       (failMessage message exception)
       (Nothing :: Maybe ())
       Nothing
+
 
 runSubscription :: (Message -> Message) -> SubscriberId -> (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO Void
 runSubscription mapMessage failedSubscriberId withConnection Subscription{..} = do
@@ -217,9 +230,11 @@ runSubscription mapMessage failedSubscriberId withConnection Subscription{..} = 
 
   poll actualStartingPosition actualStartingPosition
 
+
 start :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO Void
 start withConnection subscription@Subscription{..} =
   runSubscription id subscriberId withConnection subscription
+
 
 retryFailures :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Subscription -> IO Void
 retryFailures withConnection subscription@Subscription{..} =

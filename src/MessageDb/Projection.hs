@@ -1,13 +1,14 @@
-module MessageDb.Projection (
-  ProjectHandlers,
-  Projection (..),
-  Functions.BatchSize (..),
-  emptyHandlers,
-  attachHandler,
-  detachHandler,
-  project,
-  fetch,
-) where
+module MessageDb.Projection
+  ( ProjectHandlers
+  , Projection (..)
+  , Functions.BatchSize (..)
+  , emptyHandlers
+  , attachHandler
+  , detachHandler
+  , project
+  , fetch
+  )
+where
 
 import Control.Exception.Safe (throwIO)
 import Control.Monad (foldM)
@@ -24,34 +25,41 @@ import qualified MessageDb.Message as Message
 import MessageDb.StreamName (StreamName)
 import MessageDb.TypedMessage (TypedMessage)
 
+
 type ProjectHandlers entity = Handlers entity entity
+
 
 emptyHandlers :: ProjectHandlers entity
 emptyHandlers = Handlers.empty
+
 
 attachHandler :: (FromJSON payload, FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> entity -> entity) -> ProjectHandlers entity -> ProjectHandlers entity
 attachHandler =
   Handlers.attach
 
+
 detachHandler :: MessageType -> ProjectHandlers entity -> ProjectHandlers entity
 detachHandler =
   Handlers.detach
+
 
 data Projection entity = Projection
   { initial :: entity
   , handlers :: ProjectHandlers entity
   }
 
+
 project :: Projection entity -> NonEmpty Message -> Either HandleError entity
 project Projection{..} messages = do
   let applyHandler entity message =
         let handle = Handlers.handle (Message.messageType message) handlers
          in case handle message entity of
-              Right updatedEntity -> pure updatedEntity
-              Left (MessageHandlerNotFound _) -> pure entity
+              Right updatedEntity -> Right updatedEntity
+              Left MessageHandlerNotFound -> Right entity
               Left err -> Left err
 
   foldM applyHandler initial (toList messages)
+
 
 fetch :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Functions.BatchSize -> StreamName -> Projection entity -> IO (Maybe entity)
 fetch withConnection batchSize streamName projection =
