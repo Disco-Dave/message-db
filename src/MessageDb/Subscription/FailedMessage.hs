@@ -1,17 +1,14 @@
 module MessageDb.Subscription.FailedMessage
   ( FailedMessage (..),
-    failMessage,
     messageType,
     handleFailures,
   )
 where
 
-import Control.Exception.Safe (SomeException)
 import Data.Aeson (KeyValue ((.=)), (.:))
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
-import qualified Data.Text as Text
 import MessageDb.Handlers (Handlers)
 import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message)
@@ -28,14 +25,6 @@ data FailedMessage = FailedMessage
 messageType :: Message.MessageType
 messageType =
   "FailedMessage"
-
-
-failMessage :: Message -> SomeException -> FailedMessage
-failMessage message exception =
-  FailedMessage
-    { message = message
-    , reason = Text.pack $ show exception
-    }
 
 
 toKeyValues :: Aeson.KeyValue keyValue => FailedMessage -> [keyValue]

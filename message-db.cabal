@@ -34,12 +34,13 @@ library
       DeriveGeneric
       FlexibleContexts
       GeneralizedNewtypeDeriving
+      LambdaCase
       MultiParamTypeClasses
       NamedFieldPuns
+      NumericUnderscores
       OverloadedStrings
       RankNTypes
       RecordWildCards
-      NumericUnderscores
       StrictData
       TypeApplications
       TypeFamilies
@@ -76,12 +77,13 @@ test-suite message-db-test
       DeriveGeneric
       FlexibleContexts
       GeneralizedNewtypeDeriving
+      LambdaCase
       MultiParamTypeClasses
       NamedFieldPuns
+      NumericUnderscores
       OverloadedStrings
       RankNTypes
       RecordWildCards
-      NumericUnderscores
       StrictData
       TypeApplications
       TypeFamilies

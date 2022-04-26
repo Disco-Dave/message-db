@@ -21,12 +21,13 @@ default-extensions:
   - DeriveGeneric
   - FlexibleContexts
   - GeneralizedNewtypeDeriving
+  - LambdaCase
   - MultiParamTypeClasses
   - NamedFieldPuns
+  - NumericUnderscores
   - OverloadedStrings
   - RankNTypes
   - RecordWildCards
-  - NumericUnderscores
   - StrictData
   - TypeApplications
   - TypeFamilies

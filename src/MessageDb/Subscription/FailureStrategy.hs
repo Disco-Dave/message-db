@@ -1,18 +1,26 @@
 module MessageDb.Subscription.FailureStrategy
-  ( FailureReason (..)
-  , FailureStrategy
-  , ignoreFailures
+  ( FailureReason (..),
+    FailureStrategy,
+    ignoreFailures,
+    writeToCategory,
+    writeUnknownFailuresToCategory,
+    writeAllToCategory,
   )
 where
 
 import Control.Exception (SomeException)
 import Control.Exception.Safe (finally)
-import qualified Database.PostgreSQL.Simple as Postgres
+import Control.Monad (void, when)
+import qualified Data.Text as Text
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUID.V4
 import qualified MessageDb.Functions as Functions
 import MessageDb.Handlers
-import MessageDb.Message
+import MessageDb.Message (Message)
+import qualified MessageDb.Message as Message
 import qualified MessageDb.StreamName as StreamName
-import MessageDb.Subscription.FailedMessage
+import MessageDb.Subscription.FailedMessage (FailedMessage (FailedMessage))
+import qualified MessageDb.Subscription.FailedMessage as FailedMessage
 
 
 data FailureReason
@@ -45,5 +53,45 @@ instance Monoid FailureStrategy where
   mempty = ignoreFailures
 
 
-writeToCategory :: Functions.WithConnection -> StreamName.CategoryName -> FailureStrategy
-writeToCategory withConnection = undefined
+writeToCategory :: (FailureReason -> Bool) -> Functions.WithConnection -> StreamName.CategoryName -> FailureStrategy
+writeToCategory shouldKeep withConnection categoryName =
+  let logFailureToCategory message reason =
+        when (shouldKeep reason) $ do
+          identity <-
+            case StreamName.identity (Message.streamName message) of
+              Nothing -> fmap UUID.toText UUID.V4.nextRandom
+              Just value -> pure $ Message.fromIdentityName value
+
+          let streamName =
+                Message.StreamName $
+                  Message.fromCategoryName categoryName <> "-" <> identity
+
+              payload =
+                FailedMessage
+                  { message = message
+                  , reason = Text.pack $ show reason
+                  }
+
+              metadata = Message.metadata message
+
+          void . withConnection $ \connection ->
+            Functions.writeMessage
+              connection
+              streamName
+              FailedMessage.messageType
+              payload
+              metadata
+              Nothing
+   in FailureStrategy logFailureToCategory
+
+
+writeUnknownFailuresToCategory :: Functions.WithConnection -> StreamName.CategoryName -> FailureStrategy
+writeUnknownFailuresToCategory =
+  writeToCategory $ \case
+    UnknownFailure _ -> True
+    _ -> False
+
+
+writeAllToCategory :: Functions.WithConnection -> StreamName.CategoryName -> FailureStrategy
+writeAllToCategory =
+  writeToCategory $ const True
