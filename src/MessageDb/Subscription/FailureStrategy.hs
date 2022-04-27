@@ -63,8 +63,7 @@ writeToCategory shouldKeep withConnection categoryName =
               Just value -> pure $ Message.fromIdentityName value
 
           let streamName =
-                Message.StreamName $
-                  Message.fromCategoryName categoryName <> "-" <> identity
+               Message.addIdentity categoryName identity 
 
               payload =
                 FailedMessage

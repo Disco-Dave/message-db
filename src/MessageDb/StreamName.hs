@@ -1,12 +1,13 @@
 module MessageDb.StreamName
-  ( StreamName (..)
-  , CategoryName
-  , category
-  , fromCategoryName
-  , IdentityName
-  , identity
-  , fromIdentityName
-  , all
+  ( StreamName (..),
+    CategoryName,
+    category,
+    fromCategoryName,
+    IdentityName,
+    identity,
+    addIdentity,
+    fromIdentityName,
+    all,
   )
 where
 
@@ -102,6 +103,11 @@ identity (StreamName text) =
    in if Text.null value
         then Nothing
         else Just $ IdentityName value
+
+
+addIdentity :: CategoryName -> Text -> StreamName
+addIdentity (CategoryName categoryName) identityName =
+  StreamName $ categoryName <> Text.singleton separator <> identityName
 
 
 instance Aeson.ToJSON IdentityName where

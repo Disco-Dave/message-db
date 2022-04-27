@@ -20,6 +20,7 @@ module MessageDb.Message
   , StreamName.IdentityName
   , StreamName.identity
   , StreamName.fromIdentityName
+  , StreamName.addIdentity
   )
 where
 
