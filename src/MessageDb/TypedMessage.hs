@@ -1,7 +1,7 @@
 module MessageDb.TypedMessage
-  ( TypedMessage (..)
-  , ConversionFailure (..)
-  , typed
+  ( TypedMessage (..),
+    ConversionFailure (..),
+    typed,
   )
 where
 
@@ -9,11 +9,12 @@ import Control.Exception (Exception)
 import qualified Data.Aeson as Aeson
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
+import MessageDb.StreamName (StreamName)
 
 
 data TypedMessage payload metadata = TypedMessage
   { messageId :: Message.MessageId
-  , streamName :: Message.StreamName
+  , streamName :: StreamName
   , messageType :: Message.MessageType
   , streamPosition :: Message.StreamPosition
   , globalPosition :: Message.GlobalPosition

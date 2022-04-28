@@ -1,22 +1,19 @@
 module MessageDb.Projection
-  ( ProjectHandlers
-  , Projection (..)
-  , Functions.BatchSize (..)
-  , emptyHandlers
-  , attachHandler
-  , detachHandler
-  , project
-  , fetch
+  ( ProjectHandlers,
+    Projection (..),
+    Functions.BatchSize (..),
+    emptyHandlers,
+    attachHandler,
+    detachHandler,
+    project,
+    fetch,
   )
 where
 
-import Control.Exception.Safe (throwIO)
-import Control.Monad (foldM)
 import Data.Aeson (FromJSON)
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified Database.PostgreSQL.Simple as Postgres
 import qualified MessageDb.Functions as Functions
 import MessageDb.Handlers (HandleError (..), Handlers)
 import qualified MessageDb.Handlers as Handlers
@@ -49,21 +46,19 @@ data Projection entity = Projection
   }
 
 
-project :: Projection entity -> NonEmpty Message -> Either HandleError entity
-project Projection{..} messages = do
-  let applyHandler entity message =
+project :: Projection entity -> NonEmpty Message -> ([HandleError], entity)
+project Projection{..} messages =
+  let applyHandler message (errors, entity) =
         let handle = Handlers.handle (Message.messageType message) handlers
          in case handle message entity of
-              Right updatedEntity -> Right updatedEntity
-              Left MessageHandlerNotFound -> Right entity
-              Left err -> Left err
-
-  foldM applyHandler initial (toList messages)
+              Right updatedEntity -> (errors, updatedEntity)
+              Left newError -> (newError : errors, entity)
+   in foldr applyHandler ([], initial) (toList messages)
 
 
-fetch :: (forall a. (Postgres.Connection -> IO a) -> IO a) -> Functions.BatchSize -> StreamName -> Projection entity -> IO (Maybe entity)
+fetch :: Functions.WithConnection -> Functions.BatchSize -> StreamName -> Projection entity -> IO (Maybe ([HandleError], entity))
 fetch withConnection batchSize streamName projection =
-  let query position currentProjection = do
+  let query position (errors, entity) = do
         messages <- withConnection $ \connection ->
           Functions.getStreamMessages connection streamName (Just position) (Just batchSize) Nothing
 
@@ -71,16 +66,16 @@ fetch withConnection batchSize streamName projection =
           (firstMessage : otherMessages) -> do
             let nonEmptyMessages = firstMessage :| otherMessages
 
-            entity <- either throwIO pure $ project currentProjection nonEmptyMessages
+            let (updatedErrors, updatedEntity) = project (projection{initial = entity}) nonEmptyMessages
 
             if batchSize == Functions.Unlimited
-              then pure $ Just entity
+              then pure $ Just (updatedErrors, updatedEntity)
               else
-                let nextPosition = streamPosition (NonEmpty.last nonEmptyMessages) + 1
-                 in query nextPosition $ currentProjection{initial = entity}
+                let nextPosition = streamPosition (NonEmpty.last nonEmptyMessages)
+                 in query nextPosition (updatedErrors, updatedEntity)
           _ ->
             pure $
               if batchSize == Functions.Unlimited
                 then Nothing
-                else Just $ initial currentProjection
-   in query 0 projection
+                else Just (errors, entity)
+   in query 0 ([], initial projection)

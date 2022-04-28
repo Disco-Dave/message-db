@@ -1,26 +1,15 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module MessageDb.Message
-  ( MessageId (..)
-  , newMessageId
-  , MessageType (..)
-  , StreamPosition (..)
-  , GlobalPosition (..)
-  , CreatedAtTimestamp (..)
-  , Payload (..)
-  , Metadata (..)
-  , typedPayload
-  , typedMetadata
-  , Message (..)
-  , StreamName (..)
-  , StreamName.all
-  , StreamName.CategoryName
-  , StreamName.fromCategoryName
-  , StreamName.category
-  , StreamName.IdentityName
-  , StreamName.identity
-  , StreamName.fromIdentityName
-  , StreamName.addIdentity
+  ( MessageId (..),
+    newMessageId,
+    MessageType (..),
+    StreamPosition (..),
+    GlobalPosition (..),
+    CreatedAtTimestamp (..),
+    Payload (..),
+    Metadata (..),
+    Message (..),
+    typedPayload,
+    typedMetadata,
   )
 where
 
@@ -39,7 +28,6 @@ import qualified Database.PostgreSQL.Simple.FromField as FromField
 import Database.PostgreSQL.Simple.ToField (ToField)
 import qualified Database.PostgreSQL.Simple.ToField as ToField
 import MessageDb.StreamName (StreamName (..))
-import qualified MessageDb.StreamName as StreamName
 
 
 newtype MessageId = MessageId

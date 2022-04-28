@@ -7,7 +7,6 @@ ghc-options:
   - -Wno-implicit-prelude
   - -Wno-missed-specialisations
   - -Wno-missing-deriving-strategies
-  - -Wno-missing-exported-signatures
   - -Wno-missing-import-lists
   - -Wno-missing-local-signatures
   - -Wno-missing-safe-haskell-mode
@@ -17,21 +16,16 @@ ghc-options:
   - -Wno-unsafe
 
 default-extensions:
-  - DataKinds
-  - DeriveGeneric
-  - FlexibleContexts
   - GeneralizedNewtypeDeriving
   - LambdaCase
-  - MultiParamTypeClasses
   - NamedFieldPuns
   - NumericUnderscores
   - OverloadedStrings
   - RankNTypes
   - RecordWildCards
+  - ScopedTypeVariables
   - StrictData
   - TypeApplications
-  - TypeFamilies
-  - TypeOperators
 
 dependencies:
   - base >= 4.7 && < 5
@@ -40,18 +34,11 @@ library:
   source-dirs: src
   dependencies:
     - aeson
-    - bytestring
     - containers
-    - directory
-    - exceptions
-    - filepath
-    - mtl
     - postgresql-simple
     - safe-exceptions
     - text
     - time
-    - transformers
-    - unliftio-core
     - uuid
 
 tests:

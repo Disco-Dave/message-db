@@ -2,19 +2,19 @@
 
 -- | Provides access to the functions described at http://docs.eventide-project.org/user-guide/message-db/server-functions.html
 module MessageDb.Functions
-  ( WithConnection
-  , ExpectedVersion (..)
-  , BatchSize (..)
-  , Condition (..)
-  , ConsumerGroup (..)
-  , Correlation (..)
-  , lookupById
-  , lookupByPosition
-  , writeMessage
-  , getStreamMessages
-  , getCategoryMessages
-  , getLastStreamMessage
-  , streamVersion
+  ( WithConnection,
+    ExpectedVersion (..),
+    BatchSize (..),
+    Condition (..),
+    ConsumerGroup (..),
+    Correlation (..),
+    lookupById,
+    lookupByPosition,
+    writeMessage,
+    getStreamMessages,
+    getCategoryMessages,
+    getLastStreamMessage,
+    streamVersion,
   )
 where
 
@@ -28,6 +28,7 @@ import Database.PostgreSQL.Simple.FromRow (RowParser, field)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
+import MessageDb.StreamName (CategoryName, StreamName, fromCategoryName, fromStreamName)
 import Numeric.Natural (Natural)
 
 
@@ -135,7 +136,7 @@ writeMessage ::
   , Aeson.ToJSON metadata
   ) =>
   Postgres.Connection ->
-  Message.StreamName ->
+  StreamName ->
   Message.MessageType ->
   payload ->
   Maybe metadata ->
@@ -158,7 +159,7 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
         |]
       params =
         ( UUID.toText $ Message.fromMessageId messageId
-        , Message.fromStreamName streamName
+        , fromStreamName streamName
         , Message.fromMessageType messageType
         , Aeson.toJSON payload
         , fmap Aeson.toJSON metadata
@@ -174,7 +175,7 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
 -- | Retrieve messages from a single stream, optionally specifying the starting position, the number of messages to retrieve, and an additional condition that will be appended to the SQL command's WHERE clause.
 getStreamMessages ::
   Postgres.Connection ->
-  Message.StreamName ->
+  StreamName ->
   Maybe Message.StreamPosition ->
   Maybe BatchSize ->
   Maybe Condition ->
@@ -199,7 +200,7 @@ getStreamMessages connection streamName position batchSize condition =
           );
         |]
       params =
-        ( Message.fromStreamName streamName
+        ( fromStreamName streamName
         , maybe 0 Message.fromStreamPosition position
         , maybe 1000 batchSizeToInteger batchSize
         , fmap fromCondition condition
@@ -210,7 +211,7 @@ getStreamMessages connection streamName position batchSize condition =
 -- | Retrieve messages from a category of streams, optionally specifying the starting position, the number of messages to retrieve, the correlation category for Pub/Sub, consumer group parameters, and an additional condition that will be appended to the SQL command's WHERE clause.
 getCategoryMessages ::
   Postgres.Connection ->
-  Message.CategoryName ->
+  CategoryName ->
   Maybe Message.GlobalPosition ->
   Maybe BatchSize ->
   Maybe Correlation ->
@@ -240,7 +241,7 @@ getCategoryMessages connection category position batchSize correlation consumerG
           );
         |]
       params =
-        ( Message.fromCategoryName category
+        ( fromCategoryName category
         , maybe 0 Message.fromGlobalPosition position
         , maybe 1000 batchSizeToInteger batchSize
         , fmap fromCorrelation correlation
@@ -252,7 +253,7 @@ getCategoryMessages connection category position batchSize correlation consumerG
 
 
 -- | Row from the messages table that corresponds to the highest position number in the stream.
-getLastStreamMessage :: Postgres.Connection -> Message.StreamName -> IO (Maybe Message)
+getLastStreamMessage :: Postgres.Connection -> StreamName -> IO (Maybe Message)
 getLastStreamMessage connection streamName =
   let query =
         [sql|
@@ -270,12 +271,12 @@ getLastStreamMessage connection streamName =
           );
         |]
       params =
-        Postgres.Only (Message.fromStreamName streamName)
+        Postgres.Only (fromStreamName streamName)
    in listToMaybe <$> Postgres.queryWith messageParser connection query params
 
 
 -- | Highest position number in the stream.
-streamVersion :: Postgres.Connection -> Message.StreamName -> IO (Maybe Message.StreamPosition)
+streamVersion :: Postgres.Connection -> StreamName -> IO (Maybe Message.StreamPosition)
 streamVersion connection streamName = do
   let query =
         [sql|
@@ -284,7 +285,7 @@ streamVersion connection streamName = do
           );
         |]
       params =
-        Postgres.Only (Message.fromStreamName streamName)
+        Postgres.Only (fromStreamName streamName)
 
   result <- Postgres.query connection query params
 

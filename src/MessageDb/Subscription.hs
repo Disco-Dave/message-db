@@ -18,7 +18,7 @@ import MessageDb.Functions ()
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
-import MessageDb.StreamName ()
+import MessageDb.StreamName (CategoryName)
 import MessageDb.Subscription.FailureStrategy (FailureStrategy)
 import qualified MessageDb.Subscription.FailureStrategy as FailureStrategy
 import MessageDb.Subscription.Handlers (SubscriptionHandlers)
@@ -29,7 +29,7 @@ import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
 
 
 data Subscription = Subscription
-  { categoryName :: Message.CategoryName
+  { categoryName :: CategoryName
   , messagesPerTick :: NumberOfMessages
   , tickInterval :: Microseconds
   , logMessages :: NonEmpty Message -> IO ()
@@ -42,7 +42,7 @@ data Subscription = Subscription
   }
 
 
-subscribe :: Message.CategoryName -> Subscription
+subscribe :: CategoryName -> Subscription
 subscribe categoryName =
   Subscription
     { categoryName = categoryName

@@ -13,6 +13,7 @@ import Control.Monad (void)
 import qualified Database.PostgreSQL.Simple as Postgres
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
+import MessageDb.StreamName (StreamName)
 import MessageDb.Units (NumberOfMessages (..))
 
 
@@ -38,7 +39,7 @@ dontSave =
 type PositionUpdateInterval = NumberOfMessages
 
 
-writeToStream :: Functions.WithConnection -> PositionUpdateInterval -> Message.StreamName -> PositionStrategy
+writeToStream :: Functions.WithConnection -> PositionUpdateInterval -> StreamName -> PositionStrategy
 writeToStream withConnection positionUpdateInterval streamName =
   let messageType :: Message.MessageType
       messageType =
