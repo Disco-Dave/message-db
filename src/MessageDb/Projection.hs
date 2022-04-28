@@ -2,6 +2,7 @@ module MessageDb.Projection
   ( ProjectHandlers,
     Projection (..),
     Functions.BatchSize (..),
+    UnprocessedMessage (..),
     emptyHandlers,
     attachHandler,
     detachHandler,
@@ -10,6 +11,7 @@ module MessageDb.Projection
   )
 where
 
+import Control.Exception (Exception)
 import Data.Aeson (FromJSON)
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -46,17 +48,25 @@ data Projection entity = Projection
   }
 
 
-project :: Projection entity -> NonEmpty Message -> ([HandleError], entity)
+data UnprocessedMessage = UnprocessedMessage
+  { message :: Message
+  , reason :: HandleError
+  }
+  deriving (Show, Eq)
+instance Exception UnprocessedMessage
+
+
+project :: Projection entity -> NonEmpty Message -> ([UnprocessedMessage], entity)
 project Projection{..} messages =
   let applyHandler message (errors, entity) =
         let handle = Handlers.handle (Message.messageType message) handlers
          in case handle message entity of
               Right updatedEntity -> (errors, updatedEntity)
-              Left newError -> (newError : errors, entity)
+              Left newError -> (UnprocessedMessage message newError : errors, entity)
    in foldr applyHandler ([], initial) (toList messages)
 
 
-fetch :: Functions.WithConnection -> Functions.BatchSize -> StreamName -> Projection entity -> IO (Maybe ([HandleError], entity))
+fetch :: Functions.WithConnection -> Functions.BatchSize -> StreamName -> Projection entity -> IO (Maybe ([UnprocessedMessage], entity))
 fetch withConnection batchSize streamName projection =
   let query position (errors, entity) = do
         messages <- withConnection $ \connection ->
