@@ -64,9 +64,9 @@ start withConnection Subscription{..} = do
       sleep =
         threadDelay (fromIntegral (fromMicroseconds tickInterval))
 
-      queryCategory :: Message.GlobalPosition -> IO (Maybe (NonEmpty Message))
+      queryCategory :: Message.GlobalPosition -> IO [Message]
       queryCategory position =
-        fmap NonEmpty.nonEmpty . withConnection $ \connection ->
+        withConnection $ \connection ->
           Functions.getCategoryMessages
             connection
             categoryName
@@ -91,16 +91,16 @@ start withConnection Subscription{..} = do
           Left reason ->
             FailureStrategy.logFailure failureStrategy message reason
 
-      processMessages :: Maybe (NonEmpty Message) -> IO (NumberOfMessages, Maybe Message.GlobalPosition)
-      processMessages maybeMessages =
-        case maybeMessages of
+      processMessages :: [Message] -> IO (NumberOfMessages, Maybe Message.GlobalPosition)
+      processMessages messages =
+        case NonEmpty.nonEmpty messages of
           Nothing -> pure (0, Nothing)
-          Just messages -> do
-            logMessages messages
-            traverse_ handle messages
+          Just nonEmptyMessages -> do
+            logMessages nonEmptyMessages
+            traverse_ handle nonEmptyMessages
             pure
-              ( NumberOfMessages . fromIntegral $ NonEmpty.length messages
-              , Just . Message.globalPosition $ NonEmpty.last messages
+              ( NumberOfMessages . fromIntegral $ NonEmpty.length nonEmptyMessages
+              , Just . Message.globalPosition $ NonEmpty.last nonEmptyMessages
               )
 
       poll :: Message.GlobalPosition -> Message.GlobalPosition -> IO Void
