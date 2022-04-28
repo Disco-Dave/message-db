@@ -1,0 +1,3 @@
+[submodule "test/message-db-init-scripts"]
+	path = test/message-db-init-scripts
+	url = https://github.com/message-db/message-db.git

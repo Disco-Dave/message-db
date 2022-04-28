@@ -194,7 +194,7 @@ getStreamMessages connection streamName position batchSize condition =
             ,time::timestamptz
           FROM message_store.get_stream_messages (
             stream_name => ?
-            ,position => ?
+            ,"position" => ?
             ,batch_size => ?
             ,condition => ?
           );
@@ -232,7 +232,7 @@ getCategoryMessages connection category position batchSize correlation consumerG
             ,time::timestamptz
           FROM message_store.get_category_messages (
             category_name => ?
-            ,position => ?
+            ,"position" => ?
             ,batch_size => ?
             ,correlation => ?
             ,consumer_group_member => ?

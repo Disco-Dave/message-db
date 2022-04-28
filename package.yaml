@@ -50,16 +50,12 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - aeson
       - bytestring
-      - directory
-      - exceptions
-      - filepath
+      - containers
+      - hspec
       - message-db
-      - mtl
+      - postgres-options
       - postgresql-simple
-      - text
-      - time
-      - transformers
+      - tmp-postgres
+      - typed-process
       - unliftio
-      - uuid

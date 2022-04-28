@@ -1,2 +1,107 @@
-module TempMessageDb where
+{-# LANGUAGE QuasiQuotes #-}
 
+module TempMessageDb
+  ( withDatabaseUrl,
+    withConnection,
+  )
+where
+
+import Control.Monad (void)
+import Data.ByteString (ByteString)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
+import Data.Monoid (getLast)
+import qualified Database.PostgreSQL.Simple as Postgres
+import qualified Database.PostgreSQL.Simple as Simple
+import Database.PostgreSQL.Simple.Options (Options)
+import qualified Database.PostgreSQL.Simple.Options as PostgresOptions
+import Database.PostgreSQL.Simple.SqlQQ (sql)
+import Database.Postgres.Temp (Accum (Merge))
+import qualified Database.Postgres.Temp as PostgresTemp
+import System.Environment (getEnvironment)
+import qualified System.Process.Typed as Process
+import qualified UnliftIO
+import UnliftIO.Exception (bracket)
+
+
+migrate :: Options -> IO ()
+migrate options = do
+  hostEnv <- getEnvironment
+
+  let fromLast =
+        fromMaybe "" . getLast
+
+      processEnv =
+        hostEnv
+          <> [
+               ( "PGHOST"
+               , fromLast $ PostgresOptions.host options
+               )
+             ,
+               ( "PGDATABASE"
+               , fromLast $ PostgresOptions.dbname options
+               )
+             ,
+               ( "PGPORT"
+               , fromLast . fmap show $ PostgresOptions.port options
+               )
+             ,
+               ( "PGUSER"
+               , fromLast $ PostgresOptions.user options
+               )
+             ]
+      command = Process.proc "test/message-db-init-scripts/database/install.sh" []
+   in void . Process.readProcess_ $ Process.setEnv processEnv command
+
+  let url = PostgresOptions.toConnectionString options
+   in bracket (Simple.connectPostgreSQL url) Simple.close $ \connection -> do
+        let query =
+              [sql|
+                CREATE ROLE test_user 
+                WITH LOGIN PASSWORD 'password' 
+                IN ROLE message_store;
+              |]
+         in void $ Simple.execute_ connection query
+
+        let query =
+              [sql|
+                ALTER ROLE test_user 
+                SET search_path TO message_store,public;
+              |]
+         in void $ Simple.execute_ connection query
+
+
+withDatabaseUrl :: (ByteString -> IO a) -> IO a
+withDatabaseUrl use = do
+  let tempConfig =
+        mempty
+          { PostgresTemp.connectionOptions =
+              mempty{PostgresOptions.user = pure "postgres"}
+          , PostgresTemp.initDbConfig =
+              Merge $
+                mempty
+                  { PostgresTemp.commandLine =
+                      mempty{PostgresTemp.keyBased = Map.fromList [("--username=", Just "postgres")]}
+                  }
+          }
+
+  result <- PostgresTemp.withConfig tempConfig $ \db ->
+    let options = PostgresTemp.toConnectionOptions db
+        dbUrl =
+          PostgresOptions.toConnectionString $
+            options
+              { PostgresOptions.user = pure "test_user"
+              , PostgresOptions.password = pure "password"
+              , PostgresOptions.dbname = pure "message_store"
+              }
+     in migrate options *> use dbUrl
+
+  case result of
+    Left err -> UnliftIO.throwIO err
+    Right value -> pure value
+
+
+withConnection :: (Postgres.Connection -> IO a) -> IO a
+withConnection use =
+  withDatabaseUrl $ \url ->
+    bracket (Simple.connectPostgreSQL url) Simple.close use
