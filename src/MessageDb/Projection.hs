@@ -66,13 +66,13 @@ fetch withConnection batchSize streamName projection =
           (firstMessage : otherMessages) -> do
             let nonEmptyMessages = firstMessage :| otherMessages
 
-            let (updatedErrors, updatedEntity) = project (projection{initial = entity}) nonEmptyMessages
+            let (newErrors, updatedEntity) = project (projection{initial = entity}) nonEmptyMessages
 
             if batchSize == Functions.Unlimited
-              then pure $ Just (updatedErrors, updatedEntity)
+              then pure $ Just (errors <> newErrors, updatedEntity)
               else
                 let nextPosition = streamPosition (NonEmpty.last nonEmptyMessages)
-                 in query nextPosition (updatedErrors, updatedEntity)
+                 in query nextPosition (errors <> newErrors, updatedEntity)
           _ ->
             pure $
               if batchSize == Functions.Unlimited
