@@ -38,7 +38,7 @@ type WithConnection = forall records. (Postgres.Connection -> IO records) -> IO 
 newtype ExpectedVersion = ExpectedVersion
   { fromExpectedVersion :: Message.StreamPosition
   }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Num)
 
 
 data ConsumerGroup = ConsumerGroup
@@ -143,7 +143,6 @@ writeMessage ::
   Maybe ExpectedVersion ->
   IO (Message.MessageId, Message.StreamPosition)
 writeMessage connection streamName messageType payload metadata expectedVersion = do
-  -- TODO Throw specific exception when expected version check fails
   messageId <- Message.newMessageId
 
   let query =
