@@ -25,6 +25,15 @@ spec =
             (Nothing :: Maybe ())
             Nothing
 
+        _ <-
+          Functions.writeMessage
+            connection
+            "foobar-2000"
+            "Unit"
+            ()
+            (Nothing :: Maybe ())
+            (Just 99)
+
         results <-
           try @_ @Simple.SqlError $
             Functions.writeMessage
@@ -40,4 +49,4 @@ spec =
                 Right _ -> ""
                 Left err -> Simple.sqlErrorMsg err
 
-        errorMsg `shouldBe` "Wrong expected version: 64 (Stream: foobar-2000, Stream Version: 99)"
+        errorMsg `shouldBe` "Wrong expected version: 64 (Stream: foobar-2000, Stream Version: 100)"
