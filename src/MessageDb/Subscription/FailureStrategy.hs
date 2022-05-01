@@ -59,11 +59,11 @@ writeToCategory shouldKeep withConnection categoryName =
         when (shouldKeep reason) $ do
           identity <-
             case StreamName.identity (Message.streamName message) of
-              Nothing -> fmap UUID.toText UUID.V4.nextRandom
-              Just value -> pure $ StreamName.fromIdentityName value
+              Nothing -> fmap (StreamName.IdentityName . UUID.toText) UUID.V4.nextRandom
+              Just value -> pure value
 
           let streamName =
-               StreamName.addIdentity categoryName identity 
+                StreamName.addIdentity categoryName identity
 
               payload =
                 FailedMessage

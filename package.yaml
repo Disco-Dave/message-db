@@ -50,9 +50,12 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
+      - aeson
       - bytestring
       - containers
+      - hedgehog
       - hspec
+      - hspec-hedgehog
       - message-db
       - postgres-options
       - postgresql-simple

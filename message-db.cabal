@@ -57,6 +57,8 @@ test-suite message-db-test
   main-is: Spec.hs
   other-modules:
       MessageDb.FunctionsSpec
+      MessageDb.StreamNameSpec
+      Properties
       TempMessageDb
       Paths_message_db
   hs-source-dirs:
@@ -74,10 +76,13 @@ test-suite message-db-test
       TypeApplications
   ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-deriving-strategies -Wno-missing-import-lists -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-monomorphism-restriction -Wno-prepositive-qualified-module -Wno-safe -Wno-unsafe -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , bytestring
     , containers
+    , hedgehog
     , hspec
+    , hspec-hedgehog
     , message-db
     , postgres-options
     , postgresql-simple

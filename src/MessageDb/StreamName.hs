@@ -3,10 +3,9 @@ module MessageDb.StreamName
     CategoryName,
     category,
     fromCategoryName,
-    IdentityName,
+    IdentityName (..),
     identity,
     addIdentity,
-    fromIdentityName,
     all,
   )
 where
@@ -87,13 +86,8 @@ instance FromField CategoryName where
   fromField = fmap (fmap CategoryName) . FromField.fromField
 
 
-newtype IdentityName = IdentityName Text
+newtype IdentityName = IdentityName {fromIdentityName :: Text}
   deriving (Show, Eq, Ord)
-
-
-fromIdentityName :: IdentityName -> Text
-fromIdentityName (IdentityName text) =
-  text
 
 
 identity :: StreamName -> Maybe IdentityName
@@ -105,9 +99,9 @@ identity (StreamName text) =
         else Just $ IdentityName value
 
 
-addIdentity :: CategoryName -> Text -> StreamName
+addIdentity :: CategoryName -> IdentityName -> StreamName
 addIdentity (CategoryName categoryName) identityName =
-  StreamName $ categoryName <> Text.singleton separator <> identityName
+  StreamName $ categoryName <> Text.singleton separator <> fromIdentityName identityName
 
 
 instance Aeson.ToJSON IdentityName where
