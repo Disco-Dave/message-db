@@ -16,6 +16,7 @@ import qualified Data.Vector as Vector
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import Numeric.Natural (Natural)
 
 
 genUUID :: Gen UUID
@@ -62,13 +63,13 @@ genAesonValue =
       genString =
         Aeson.String <$> Gen.text (Range.linear 0 100) Gen.alpha
 
-      choices factor =
+      choices depth =
         [ (1, genNull)
         , (1, genBool)
         , (1, genNumber)
         , (1, genString)
-        , (2 * factor, genArray factor)
-        , (5 * factor, genObject factor)
+        , (if depth > 0 then 1 else 0, genArray depth)
+        , (if depth > 0 then 1 else 0, genObject depth)
         ]
 
       genArray factor =
@@ -89,4 +90,14 @@ genAesonValue =
             pairs =
               Gen.list (Range.linear 0 10) property
          in fmap (Aeson.Object . HashMap.fromList) pairs
-   in Gen.frequency (choices 15)
+
+   in 
+    let startingDepth = 3 :: Natural
+     in Gen.frequency 
+        [ (1, genNull)
+        , (1, genBool)
+        , (1, genNumber)
+        , (1, genString)
+        , (2, genArray startingDepth)
+        , (5, genObject startingDepth)
+        ]

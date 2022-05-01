@@ -1,4 +1,4 @@
-module MessageDb.MessageSpec
+module Generators.Message
   ( genMessageId,
     genMessageType,
     genStreamPosition,
@@ -7,18 +7,16 @@ module MessageDb.MessageSpec
     genMetadata,
     genCreatedAtTimestamp,
     genMessage,
-    spec,
   )
 where
 
 import Generators (genAesonValue, genUTCTime, genUUID)
+import Generators.StreamName (genStreamName)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
-import MessageDb.StreamNameSpec (genStreamName)
-import Test.Hspec
 
 
 genMessageId :: Gen Message.MessageId
@@ -70,8 +68,3 @@ genMessage = do
   createdAtTimestamp <- genCreatedAtTimestamp
 
   pure Message{..}
-
-
-spec :: Spec
-spec =
-  pure ()
