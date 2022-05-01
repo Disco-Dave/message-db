@@ -65,4 +65,6 @@ tests:
       - tmp-postgres
       - typed-process
       - unliftio
+      - unordered-containers
       - uuid
+      - vector
