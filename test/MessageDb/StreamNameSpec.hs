@@ -9,7 +9,7 @@ where
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import MessageDb.StreamName (StreamName)
+import MessageDb.StreamName (StreamName (..))
 import qualified MessageDb.StreamName as StreamName
 import Properties (jsonRoundtrip)
 import Test.Hspec
@@ -72,3 +72,9 @@ spec = do
 
       let streamName = StreamName.addIdentity categoryName identityName
        in StreamName.identity streamName === Just identityName
+
+    it "identity is nothing when not present" . hedgehog $ do
+      categoryName <- forAll genCategoryName
+
+      let streamName = StreamName $ StreamName.fromCategoryName categoryName
+       in StreamName.identity streamName === Nothing

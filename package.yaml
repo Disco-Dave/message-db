@@ -25,6 +25,7 @@ default-extensions:
   - RecordWildCards
   - ScopedTypeVariables
   - StrictData
+  - TupleSections
   - TypeApplications
 
 dependencies:
@@ -59,6 +60,9 @@ tests:
       - message-db
       - postgres-options
       - postgresql-simple
+      - text
+      - time
       - tmp-postgres
       - typed-process
       - unliftio
+      - uuid
