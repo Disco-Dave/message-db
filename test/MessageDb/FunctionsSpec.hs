@@ -9,13 +9,12 @@ import Data.Text.Encoding (encodeUtf8)
 import qualified Database.PostgreSQL.Simple as Simple
 import Generators.Message (genMessageType, genMetadata, genPayload)
 import Generators.StreamName (genStreamName)
-import Hedgehog (forAll)
 import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
+import qualified MessageDb.Message as Message
 import MessageDb.StreamName (StreamName (..))
 import TempMessageDb (withConnection)
 import Test.Hspec
-import Test.Hspec.Hedgehog (hedgehog, (===))
 import UnliftIO.Exception (try)
 
 
@@ -23,46 +22,68 @@ spec :: Spec
 spec =
   around withConnection $ do
     describe "writeMessage" $ do
-      it "throws exception when expected version check fails" $ \connection -> hedgehog $ do
-        streamName <- forAll genStreamName
+      it "can write a message" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample $ Gen.maybe genMetadata
+
+        (messageId, _) <-
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            metadata
+            Nothing
+
+        Just message <-
+          Functions.lookupById connection messageId
+
+        Message.messageId message `shouldBe` messageId
+        Message.streamName message `shouldBe` streamName
+        Message.messageType message `shouldBe` messageType
+        Message.payload message `shouldBe` Just payload
+        Message.metadata message `shouldBe` metadata
+
+      it "throws exception when expected version check fails" $ \connection -> do
+        streamName <- Gen.sample genStreamName
 
         replicateM_ 10 $ do
-          messageType <- forAll genMessageType
+          messageType <- Gen.sample genMessageType
 
-          payload <- forAll genPayload
-          metadata <- forAll $ Gen.maybe genMetadata
+          payload <- Gen.sample genPayload
+          metadata <- Gen.sample $ Gen.maybe genMetadata
 
-          liftIO $
-            Functions.writeMessage
-              connection
-              streamName
-              messageType
-              payload
-              metadata
-              Nothing
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            metadata
+            Nothing
 
         _ <- do
-          messageType <- forAll genMessageType
+          messageType <- Gen.sample genMessageType
 
-          payload <- forAll genPayload
-          metadata <- forAll $ Gen.maybe genMetadata
+          payload <- Gen.sample genPayload
+          metadata <- Gen.sample $ Gen.maybe genMetadata
 
-          liftIO $
-            Functions.writeMessage
-              connection
-              streamName
-              messageType
-              payload
-              metadata
-              (Just 9)
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            metadata
+            (Just 9)
 
         results <- do
-          messageType <- forAll genMessageType
+          messageType <- Gen.sample genMessageType
 
-          payload <- forAll genPayload
-          metadata <- forAll $ Gen.maybe genMetadata
+          payload <- Gen.sample genPayload
+          metadata <- Gen.sample $ Gen.maybe genMetadata
 
-          liftIO . try @_ @Simple.SqlError $
+          try @_ @Simple.SqlError $
             Functions.writeMessage
               connection
               streamName
@@ -75,9 +96,9 @@ spec =
               case results of
                 Right _ -> ""
                 Left err -> Simple.sqlErrorMsg err
-            
+
             expectedErrorMessage =
               let streamNameBS = encodeUtf8 (fromStreamName streamName)
                in "Wrong expected version: 4 (Stream: " <> streamNameBS <> ", Stream Version: 10)"
 
-        actualErrorMessage === expectedErrorMessage
+        actualErrorMessage `shouldBe` expectedErrorMessage
