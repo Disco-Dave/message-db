@@ -21,6 +21,14 @@ import UnliftIO.Exception (try)
 spec :: Spec
 spec =
   around withConnection $ do
+    describe "lookupById" $ do
+      it "returns nothing when no message exists with id" $ const pending
+      it "returns correct message when message exists with id" $ const pending
+
+    describe "lookupByPosition" $ do
+      it "returns nothing when no message exists at global position" $ const pending
+      it "returns correct message when message exists at global position" $ const pending
+
     describe "writeMessage" $ do
       it "can write a message with metadata" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -126,7 +134,7 @@ spec =
 
         actualErrorMessage `shouldBe` expectedErrorMessage
 
-    describe "getStreaMessages" $ do
+    describe "getStreamMessages" $ do
       it "returns an empty list when there are no messages" $ \connection -> do
         rows <-
           Functions.getStreamMessages
@@ -282,7 +290,9 @@ spec =
           Message.payload message `shouldBe` Just payload
           Message.metadata message `shouldBe` metadata
 
-      it "returns messages that don't match the condition when specified" $ \connection -> do
+      it "returns everything when a batch size of unlimited is specified" $ const pending
+
+      it "returns messages that match the condition when specified" $ \connection -> do
         streamName <- Gen.sample genStreamName
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -310,3 +320,20 @@ spec =
         length messages `shouldBe` 5
         messages `shouldSatisfy` all ((== messageType1) . Message.messageType)
         messages `shouldSatisfy` all (odd . Message.fromStreamPosition . Message.streamPosition)
+
+    describe "getCategoryMessages" $ do
+      it "returns nothing when no messages exist in category" $ const pending
+      it "returns messages when there are messages in the category" $ const pending
+      it "returns messages after specified position" $ const pending
+      it "returns less than or equal to batch size of messages" $ const pending
+      it "returns everything when a batch size of unlimited is specified" $ const pending
+      it "returns correct messages when consumer group is used" $ const pending
+      it "returns messages that match the condition when specified" $ const pending
+
+    describe "getLastStreamMessage" $ do
+      it "returns nothing when there are no messages in stream" $ const pending
+      it "returns the last message when messages exist in stream" $ const pending
+
+    describe "streamVersion" $ do
+      it "returns nothing when stream is empty" $ const pending
+      it "returns the last position when stream is not empty" $ const pending
