@@ -76,13 +76,18 @@ withDatabaseUrl use = do
   let tempConfig =
         mempty
           { PostgresTemp.connectionOptions =
-              mempty{PostgresOptions.user = pure "postgres"}
+              mempty
+                { PostgresOptions.user = pure "postgres"
+                }
           , PostgresTemp.initDbConfig =
               Merge $
                 mempty
                   { PostgresTemp.commandLine =
                       mempty{PostgresTemp.keyBased = Map.fromList [("--username=", Just "postgres")]}
                   }
+          , PostgresTemp.postgresConfigFile =
+              [ ("message_store.sql_condition", "on")
+              ]
           }
 
   result <- PostgresTemp.withConfig tempConfig $ \db ->

@@ -4,7 +4,7 @@ module MessageDb.FunctionsSpec
 where
 
 import Control.Monad (replicateM_)
-import Control.Monad.IO.Class (liftIO)
+import Data.Foldable (for_)
 import Data.Text.Encoding (encodeUtf8)
 import qualified Database.PostgreSQL.Simple as Simple
 import Generators.Message (genMessageType, genMetadata, genPayload)
@@ -125,3 +125,188 @@ spec =
                in "Wrong expected version: 4 (Stream: " <> streamNameBS <> ", Stream Version: 10)"
 
         actualErrorMessage `shouldBe` expectedErrorMessage
+
+    describe "getStreaMessages" $ do
+      it "returns an empty list when there are no messages" $ \connection -> do
+        rows <-
+          Functions.getStreamMessages
+            connection
+            "foobar-2000"
+            Nothing
+            Nothing
+            Nothing
+
+        rows `shouldBe` []
+
+      it "returns messages when there are messages in the stream" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample $ Gen.maybe genMetadata
+
+        replicateM_ 10 $ do
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            metadata
+            Nothing
+
+        messages <-
+          Functions.getStreamMessages
+            connection
+            streamName
+            Nothing
+            Nothing
+            Nothing
+
+        length messages `shouldBe` 10
+
+        for_ (zip [0 .. 9] messages) $ \(index, message) -> do
+          Message.streamPosition message `shouldBe` Message.StreamPosition index
+          Message.streamName message `shouldBe` streamName
+          Message.messageType message `shouldBe` messageType
+          Message.payload message `shouldBe` Just payload
+          Message.metadata message `shouldBe` metadata
+
+      it "returns messages after specified stream position" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample $ Gen.maybe genMetadata
+
+        replicateM_ 10 $ do
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            metadata
+            Nothing
+
+        messages <-
+          Functions.getStreamMessages
+            connection
+            streamName
+            (Just 5)
+            Nothing
+            Nothing
+
+        length messages `shouldBe` 5
+
+        for_ (zip [5 .. 9] messages) $ \(index, message) -> do
+          Message.streamPosition message `shouldBe` Message.StreamPosition index
+          Message.streamName message `shouldBe` streamName
+          Message.messageType message `shouldBe` messageType
+          Message.payload message `shouldBe` Just payload
+          Message.metadata message `shouldBe` metadata
+
+      it "returns less than or equal to batch size when specified" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample $ Gen.maybe genMetadata
+
+        replicateM_ 18 $ do
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            metadata
+            Nothing
+
+        firstBatch <-
+          Functions.getStreamMessages
+            connection
+            streamName
+            Nothing
+            (Just $ Functions.FixedSize 5)
+            Nothing
+
+        secondBatch <-
+          Functions.getStreamMessages
+            connection
+            streamName
+            (Just 5)
+            (Just $ Functions.FixedSize 5)
+            Nothing
+
+        thirdBatch <-
+          Functions.getStreamMessages
+            connection
+            streamName
+            (Just 10)
+            (Just $ Functions.FixedSize 5)
+            Nothing
+
+        fourthBatch <-
+          Functions.getStreamMessages
+            connection
+            streamName
+            (Just 15)
+            (Just $ Functions.FixedSize 5)
+            Nothing
+
+        length firstBatch `shouldBe` 5
+        length secondBatch `shouldBe` 5
+        length thirdBatch `shouldBe` 5
+        length fourthBatch `shouldBe` 3
+
+        for_ (zip [0 .. 4] firstBatch) $ \(index, message) -> do
+          Message.streamPosition message `shouldBe` Message.StreamPosition index
+          Message.streamName message `shouldBe` streamName
+          Message.messageType message `shouldBe` messageType
+          Message.payload message `shouldBe` Just payload
+          Message.metadata message `shouldBe` metadata
+
+        for_ (zip [5 .. 9] secondBatch) $ \(index, message) -> do
+          Message.streamPosition message `shouldBe` Message.StreamPosition index
+          Message.streamName message `shouldBe` streamName
+          Message.messageType message `shouldBe` messageType
+          Message.payload message `shouldBe` Just payload
+          Message.metadata message `shouldBe` metadata
+
+        for_ (zip [10 .. 14] thirdBatch) $ \(index, message) -> do
+          Message.streamPosition message `shouldBe` Message.StreamPosition index
+          Message.streamName message `shouldBe` streamName
+          Message.messageType message `shouldBe` messageType
+          Message.payload message `shouldBe` Just payload
+          Message.metadata message `shouldBe` metadata
+
+        for_ (zip [15 .. 17] fourthBatch) $ \(index, message) -> do
+          Message.streamPosition message `shouldBe` Message.StreamPosition index
+          Message.streamName message `shouldBe` streamName
+          Message.messageType message `shouldBe` messageType
+          Message.payload message `shouldBe` Just payload
+          Message.metadata message `shouldBe` metadata
+
+      it "returns messages that don't match the condition when specified" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample $ Gen.maybe genMetadata
+
+        messageType1 <- Gen.sample genMessageType
+        messageType2 <- Gen.sample genMessageType
+
+        for_ [0 :: Int .. 9] $ \index -> do
+          Functions.writeMessage
+            connection
+            streamName
+            (if odd index then messageType1 else messageType2)
+            payload
+            metadata
+            Nothing
+
+        messages <-
+          Functions.getStreamMessages
+            connection
+            streamName
+            Nothing
+            Nothing
+            (Just . Functions.Condition $ "type <> '" <> Message.fromMessageType messageType2 <> "'")
+
+        length messages `shouldBe` 5
+        messages `shouldSatisfy` all ((== messageType1) . Message.messageType)
+        messages `shouldSatisfy` all (odd . Message.fromStreamPosition . Message.streamPosition)
