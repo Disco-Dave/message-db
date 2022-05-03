@@ -22,11 +22,11 @@ spec :: Spec
 spec =
   around withConnection $ do
     describe "writeMessage" $ do
-      it "can write a message" $ \connection -> do
+      it "can write a message with metadata" $ \connection -> do
         streamName <- Gen.sample genStreamName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
-        metadata <- Gen.sample $ Gen.maybe genMetadata
+        metadata <- Gen.sample genMetadata
 
         (messageId, _) <-
           Functions.writeMessage
@@ -34,7 +34,7 @@ spec =
             streamName
             messageType
             payload
-            metadata
+            (Just metadata)
             Nothing
 
         Just message <-
@@ -44,7 +44,30 @@ spec =
         Message.streamName message `shouldBe` streamName
         Message.messageType message `shouldBe` messageType
         Message.payload message `shouldBe` Just payload
-        Message.metadata message `shouldBe` metadata
+        Message.metadata message `shouldBe` Just metadata
+
+      it "can write a message without metadata" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+
+        (messageId, _) <-
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            (Nothing :: Maybe ())
+            Nothing
+
+        Just message <-
+          Functions.lookupById connection messageId
+
+        Message.messageId message `shouldBe` messageId
+        Message.streamName message `shouldBe` streamName
+        Message.messageType message `shouldBe` messageType
+        Message.payload message `shouldBe` Just payload
+        Message.metadata message `shouldBe` Nothing
 
       it "throws exception when expected version check fails" $ \connection -> do
         streamName <- Gen.sample genStreamName

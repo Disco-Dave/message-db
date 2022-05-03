@@ -55,7 +55,7 @@ library
 
 test-suite message-db-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
       Generators
       Generators.Message
@@ -63,6 +63,7 @@ test-suite message-db-test
       MessageDb.FunctionsSpec
       MessageDb.StreamNameSpec
       Properties
+      Spec
       TempMessageDb
       Paths_message_db
   hs-source-dirs:
