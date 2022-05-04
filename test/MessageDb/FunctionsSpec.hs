@@ -337,7 +337,30 @@ spec =
           Message.payload message `shouldBe` Just payload
           Message.metadata message `shouldBe` metadata
 
-      it "returns everything when a batch size of unlimited is specified" $ const pending
+      it "returns everything when a batch size of unlimited is specified" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample $ Gen.maybe genMetadata
+
+        replicateM_ 1001 $ do
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            metadata
+            Nothing
+
+        messages <- 
+          Functions.getStreamMessages
+            connection
+            streamName
+            Nothing
+            (Just Functions.Unlimited)
+            Nothing
+
+        length messages `shouldBe` 1001
 
       it "returns messages that match the condition when specified" $ \connection -> do
         streamName <- Gen.sample genStreamName
