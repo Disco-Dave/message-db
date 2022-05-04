@@ -7,7 +7,7 @@ import Control.Monad (replicateM_)
 import Data.Foldable (for_)
 import Data.Text.Encoding (encodeUtf8)
 import qualified Database.PostgreSQL.Simple as Simple
-import Generators.Message (genMessageType, genMetadata, genPayload)
+import Generators.Message (genGlobalPosition, genMessageType, genMetadata, genPayload)
 import Generators.StreamName (genStreamName)
 import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
@@ -22,12 +22,59 @@ spec :: Spec
 spec =
   around withConnection $ do
     describe "lookupById" $ do
-      it "returns nothing when no message exists with id" $ const pending
-      it "returns correct message when message exists with id" $ const pending
+      it "returns nothing when no message exists with id" $ \connection -> do
+        messageId <- Message.newMessageId
+        message <- Functions.lookupById connection messageId
+        message `shouldBe` Nothing
+
+      it "returns correct message when message exists with id" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample genMetadata
+
+        (messageId, _) <-
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            (Just metadata)
+            Nothing
+
+        message <- Functions.lookupById connection messageId
+
+        fmap Message.messageId message `shouldBe` Just messageId
+        fmap Message.streamName message `shouldBe` Just streamName
+        fmap Message.messageType message `shouldBe` Just messageType
+        (Message.payload =<< message) `shouldBe` Just payload
+        (Message.metadata =<< message) `shouldBe` Just metadata
 
     describe "lookupByPosition" $ do
-      it "returns nothing when no message exists at global position" $ const pending
-      it "returns correct message when message exists at global position" $ const pending
+      it "returns nothing when no message exists at global position" $ \connection -> do
+        globalPosition <- Gen.sample genGlobalPosition
+        message <- Functions.lookupByPosition connection globalPosition
+        message `shouldBe` Nothing
+
+      it "returns correct message when message exists at global position" $ \connection -> do
+        streamName <- Gen.sample genStreamName
+        messageType <- Gen.sample genMessageType
+        payload <- Gen.sample genPayload
+        metadata <- Gen.sample genMetadata
+
+        (messageId, _) <-
+          Functions.writeMessage
+            connection
+            streamName
+            messageType
+            payload
+            (Just metadata)
+            Nothing
+
+        Just expectedMessage <- Functions.lookupById connection messageId
+        Just actualMessage <- Functions.lookupByPosition connection (Message.globalPosition expectedMessage)
+
+        actualMessage `shouldBe` expectedMessage
 
     describe "writeMessage" $ do
       it "can write a message with metadata" $ \connection -> do
