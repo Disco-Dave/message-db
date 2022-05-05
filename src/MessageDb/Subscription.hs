@@ -110,6 +110,7 @@ start withConnection Subscription{..} = do
         (numberOfMessages, lastMessagePosition) <- processMessages messages
 
         let currentPosition = fromMaybe initialPosition lastMessagePosition
+            nextPosition = maybe initialPosition (+ 1) lastMessagePosition
 
         positionSaved <-
           PositionStrategy.save
@@ -119,7 +120,7 @@ start withConnection Subscription{..} = do
 
         when (numberOfMessages < messagesPerTick) sleep
 
-        poll currentPosition (fromMaybe lastPositionSaved positionSaved)
+        poll nextPosition (fromMaybe lastPositionSaved positionSaved)
 
   startingPosition <- PositionStrategy.restore positionStrategy
 

@@ -81,7 +81,7 @@ fetch withConnection batchSize streamName projection =
             if batchSize == Functions.Unlimited
               then pure $ Just (errors <> newErrors, updatedEntity)
               else
-                let nextPosition = streamPosition (NonEmpty.last nonEmptyMessages)
+                let nextPosition = 1 + streamPosition (NonEmpty.last nonEmptyMessages)
                  in query nextPosition (errors <> newErrors, updatedEntity)
           _ ->
             pure $

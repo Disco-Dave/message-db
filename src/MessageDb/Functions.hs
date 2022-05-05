@@ -230,7 +230,7 @@ getCategoryMessages connection category position batchSize correlation consumerG
             ,metadata::jsonb
             ,time::timestamptz
           FROM message_store.get_category_messages (
-            category_name => ?
+            category => ?
             ,"position" => ?
             ,batch_size => ?
             ,correlation => ?
@@ -279,7 +279,7 @@ streamVersion :: Postgres.Connection -> StreamName -> IO (Maybe Message.StreamPo
 streamVersion connection streamName = do
   let query =
         [sql|
-          SELECT message_store.stream_version (
+          SELECT * FROM message_store.stream_version (
             stream_name => ?
           );
         |]
@@ -289,5 +289,5 @@ streamVersion connection streamName = do
   result <- Postgres.query connection query params
 
   pure $ case result of
-    [Postgres.Only position] -> Just $ Message.StreamPosition position
+    [Postgres.Only (Just position)] -> Just $ Message.StreamPosition position
     _ -> Nothing
