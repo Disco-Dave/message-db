@@ -59,8 +59,10 @@ tests:
       - hspec
       - hspec-hedgehog
       - message-db
+      - mtl
       - postgres-options
       - postgresql-simple
+      - resource-pool
       - text
       - time
       - tmp-postgres

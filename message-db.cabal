@@ -67,6 +67,7 @@ test-suite message-db-test
       Properties
       Spec
       TempMessageDb
+      TestApp
       Paths_message_db
   hs-source-dirs:
       test
@@ -93,8 +94,10 @@ test-suite message-db-test
     , hspec
     , hspec-hedgehog
     , message-db
+    , mtl
     , postgres-options
     , postgresql-simple
+    , resource-pool
     , text
     , time
     , tmp-postgres
