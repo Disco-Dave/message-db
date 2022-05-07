@@ -7,10 +7,12 @@ module MessageDb.StreamName
     identity,
     addIdentity,
     all,
+    addMaybeIdentity,
   )
 where
 
 import qualified Data.Aeson as Aeson
+import Data.Coerce (coerce)
 import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -102,6 +104,15 @@ identity (StreamName text) =
 addIdentity :: CategoryName -> IdentityName -> StreamName
 addIdentity (CategoryName categoryName) identityName =
   StreamName $ categoryName <> Text.singleton separator <> fromIdentityName identityName
+
+
+addMaybeIdentity :: CategoryName -> Maybe IdentityName -> StreamName
+addMaybeIdentity categoryName maybeIdentityName =
+  case maybeIdentityName of
+    Nothing ->
+      coerce categoryName
+    Just identityName ->
+      addIdentity categoryName identityName
 
 
 instance Aeson.ToJSON IdentityName where

@@ -12,6 +12,8 @@ import qualified Data.Aeson as Aeson
 import MessageDb.Handlers (HandleError, Handlers, NoState)
 import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message, MessageType, Metadata)
+import MessageDb.StreamName (IdentityName)
+import qualified MessageDb.StreamName as StreamName
 import MessageDb.TypedMessage (TypedMessage (TypedMessage))
 import qualified MessageDb.TypedMessage as TypedMessage
 
@@ -30,10 +32,10 @@ attachMessage messageType handler =
     handler typedMessage
 
 
-attach :: Aeson.FromJSON payload => MessageType -> (payload -> IO ()) -> SubscriptionHandlers -> SubscriptionHandlers
+attach :: Aeson.FromJSON payload => MessageType -> (Maybe IdentityName -> payload -> IO ()) -> SubscriptionHandlers -> SubscriptionHandlers
 attach messageType handler =
-  attachMessage @_ @(Maybe Metadata) messageType $ \TypedMessage{payload} ->
-    handler payload
+  attachMessage @_ @(Maybe Metadata) messageType $ \TypedMessage{payload, streamName} ->
+    handler (StreamName.identity streamName) payload
 
 
 detach :: MessageType -> SubscriptionHandlers -> SubscriptionHandlers
