@@ -1,7 +1,6 @@
 module MessageDb.Projection.Handlers
   ( ProjectionHandlers,
     empty,
-    attachMessage,
     attach,
     detach,
     handle,
@@ -22,14 +21,10 @@ empty :: ProjectionHandlers entity
 empty = Handlers.empty
 
 
-attachMessage :: (FromJSON payload, FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> entity -> entity) -> ProjectionHandlers entity -> ProjectionHandlers entity
-attachMessage =
-  Handlers.attachMessage
-
-
-attach :: FromJSON payload => MessageType -> (payload -> entity -> entity) -> ProjectionHandlers entity -> ProjectionHandlers entity
+attach :: (FromJSON payload, FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> entity -> entity) -> ProjectionHandlers entity -> ProjectionHandlers entity
 attach =
   Handlers.attach
+
 
 
 detach :: MessageType -> ProjectionHandlers entity -> ProjectionHandlers entity

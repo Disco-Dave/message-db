@@ -56,6 +56,7 @@ newtype TestApp value = TestApp
     , MonadIO
     , MonadUnliftIO
     , MonadReader TestAppData
+    , MonadFail
     )
 
 
