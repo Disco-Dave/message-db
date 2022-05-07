@@ -1,17 +1,19 @@
 module MessageDb.Subscription.Handlers
-  ( SubscriptionHandlers
-  , empty
-  , attach
-  , detach
-  , handle
+  ( SubscriptionHandlers,
+    empty,
+    attachMessage,
+    attach,
+    detach,
+    handle,
   )
 where
 
 import qualified Data.Aeson as Aeson
-import MessageDb.Handlers (Handlers, NoState, HandleError)
+import MessageDb.Handlers (HandleError, Handlers, NoState)
 import qualified MessageDb.Handlers as Handlers
-import MessageDb.Message (Message, MessageType)
-import MessageDb.TypedMessage (TypedMessage)
+import MessageDb.Message (Message, MessageType, Metadata)
+import MessageDb.TypedMessage (TypedMessage (TypedMessage))
+import qualified MessageDb.TypedMessage as TypedMessage
 
 
 type SubscriptionHandlers = Handlers NoState (IO ())
@@ -22,10 +24,16 @@ empty =
   Handlers.empty
 
 
-attach :: (Aeson.FromJSON payload, Aeson.FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> IO ()) -> SubscriptionHandlers -> SubscriptionHandlers
-attach messageType handler =
-  Handlers.attach messageType $ \typedMessage _ ->
+attachMessage :: (Aeson.FromJSON payload, Aeson.FromJSON metadata) => MessageType -> (TypedMessage payload metadata -> IO ()) -> SubscriptionHandlers -> SubscriptionHandlers
+attachMessage messageType handler =
+  Handlers.attachMessage messageType $ \typedMessage _ ->
     handler typedMessage
+
+
+attach :: Aeson.FromJSON payload => MessageType -> (payload -> IO ()) -> SubscriptionHandlers -> SubscriptionHandlers
+attach messageType handler =
+  attachMessage @_ @(Maybe Metadata) messageType $ \TypedMessage{payload} ->
+    handler payload
 
 
 detach :: MessageType -> SubscriptionHandlers -> SubscriptionHandlers

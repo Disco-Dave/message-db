@@ -16,6 +16,7 @@ ghc-options:
   - -Wno-unsafe
 
 default-extensions:
+  - DeriveGeneric
   - GeneralizedNewtypeDeriving
   - LambdaCase
   - NamedFieldPuns
