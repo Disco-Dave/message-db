@@ -5,17 +5,27 @@ module TestApp
     runWith,
     run,
     withConnection,
+    withSubscriptions,
+    blockUntilStreamHas,
+    blockUntilCategoryHas,
   )
 where
 
 import Control.Monad.Cont (ContT (ContT, runContT))
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT))
 import Data.Pool (Pool)
 import qualified Data.Pool as Pool
 import qualified Database.PostgreSQL.Simple as Postgres
+import qualified MessageDb.Functions as Functions
+import MessageDb.StreamName (CategoryName, StreamName)
+import MessageDb.Subscription (Subscription)
+import qualified MessageDb.Subscription as Subscription
+import MessageDb.Units (NumberOfMessages (NumberOfMessages))
 import qualified TempMessageDb
 import UnliftIO (MonadUnliftIO (withRunInIO))
+import qualified UnliftIO.Async as Async
+import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Exception (bracket)
 
 
@@ -77,3 +87,58 @@ withConnection useConnection = do
 
   withRunInIO $ \runInIO ->
     Pool.withResource connectionPool (runInIO . useConnection)
+
+
+withSubscriptions :: [TestApp Subscription] -> (TestAppData -> IO ()) -> IO ()
+withSubscriptions makeSubscriptions useTestAppData = run $ do
+  testAppData@TestAppData{connectionPool} <- ask
+
+  subscriptions <-
+    let startSubscription = Subscription.start (Pool.withResource connectionPool)
+        startAll = Async.mapConcurrently_ startSubscription
+     in startAll <$> sequenceA makeSubscriptions
+
+  liftIO . Async.withAsync subscriptions $ \_ ->
+    useTestAppData testAppData
+
+
+blockUntilStreamHas :: StreamName -> NumberOfMessages -> TestApp ()
+blockUntilStreamHas streamName numberOfMessages = do
+  messages <- withConnection $ \connection ->
+    liftIO $
+      Functions.getStreamMessages
+        connection
+        streamName
+        Nothing
+        Nothing
+        Nothing
+
+  let currentNumberOfMessages = NumberOfMessages . fromIntegral $ length messages
+
+  if currentNumberOfMessages < numberOfMessages
+    then do
+      threadDelay 100_000
+      blockUntilStreamHas streamName numberOfMessages
+    else pure ()
+
+
+blockUntilCategoryHas :: CategoryName -> NumberOfMessages -> TestApp ()
+blockUntilCategoryHas categoryName numberOfMessages = do
+  messages <- withConnection $ \connection ->
+    liftIO $
+      Functions.getCategoryMessages
+        connection
+        categoryName
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+
+  let currentNumberOfMessages = NumberOfMessages . fromIntegral $ length messages
+
+  if currentNumberOfMessages < numberOfMessages
+    then do
+      threadDelay 100_000
+      blockUntilCategoryHas categoryName numberOfMessages
+    else pure ()
