@@ -267,40 +267,54 @@ initialAccount =
     }
 
 
-opened :: TypedMessage Opened AccountMetadata -> BankAccount -> BankAccount
+addCommandPosition :: Maybe Message.Metadata -> Set Message.GlobalPosition -> Set Message.GlobalPosition
+addCommandPosition metadata positions =
+  case Message.parseMetadata metadata of
+    Left _ -> positions
+    Right AccountMetadata{createdFrom} -> Set.insert createdFrom positions
+
+
+markAsProcessed :: TypedMessage (Maybe Message.Payload) (Maybe Message.Metadata) -> BankAccount -> BankAccount
+markAsProcessed TypedMessage{metadata} bankAccount =
+  bankAccount
+    { commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
+    }
+
+
+opened :: TypedMessage Opened (Maybe Message.Metadata) -> BankAccount -> BankAccount
 opened TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { isOpened = True
     , balance = openedBalance payload
-    , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
+    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
-closed :: TypedMessage Closed AccountMetadata -> BankAccount -> BankAccount
+closed :: TypedMessage Closed (Maybe Message.Metadata) -> BankAccount -> BankAccount
 closed TypedMessage{metadata} bankAccount =
   bankAccount
     { isOpened = False
-    , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
+    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
-deposited :: TypedMessage Deposited AccountMetadata -> BankAccount -> BankAccount
+deposited :: TypedMessage Deposited (Maybe Message.Metadata) -> BankAccount -> BankAccount
 deposited TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { balance = balance bankAccount + depositedAmount payload
-    , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
+    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
-withdrawn :: TypedMessage Withdrawn AccountMetadata -> BankAccount -> BankAccount
+withdrawn :: TypedMessage Withdrawn (Maybe Message.Metadata) -> BankAccount -> BankAccount
 withdrawn TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { balance = balance bankAccount - withdrawnAmount payload
-    , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
+    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
-withdrawRejected :: TypedMessage WithdrawRejected AccountMetadata -> BankAccount -> BankAccount
+withdrawRejected :: TypedMessage WithdrawRejected (Maybe Message.Metadata) -> BankAccount -> BankAccount
 withdrawRejected TypedMessage{payload, createdAtTimestamp, metadata} bankAccount =
   let overdraft =
         Overdraft
@@ -312,15 +326,8 @@ withdrawRejected TypedMessage{payload, createdAtTimestamp, metadata} bankAccount
             if withdrawRejectedReason payload == InsufficientFunds
               then overdraft : overdrafts bankAccount
               else overdrafts bankAccount
-        , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
+        , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
         }
-
-
-markAsProcessed :: TypedMessage (Maybe Aeson.Value) AccountMetadata -> BankAccount -> BankAccount
-markAsProcessed TypedMessage{metadata} bankAccount =
-  bankAccount
-    { commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
-    }
 
 
 projection :: Projection BankAccount
@@ -414,7 +421,7 @@ handleCommand ::
   , Aeson.ToJSON success
   ) =>
   (command -> BankAccount -> Either failure success) ->
-  TypedMessage command (Maybe Aeson.Value) ->
+  TypedMessage command (Maybe Message.Metadata) ->
   TestApp ()
 handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
   Just identityName <- pure $ StreamName.identity streamName
