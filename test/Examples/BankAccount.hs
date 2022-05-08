@@ -18,7 +18,13 @@ module Examples.BankAccount
     Withdrawn (..),
     WithdrawRejectedReason (..),
     WithdrawRejected (..),
+    Overdraft (..),
+    BankAccount (..),
     projection,
+    open,
+    close,
+    deposit,
+    withdraw,
     subscribe,
   )
 where
@@ -261,8 +267,8 @@ initialAccount =
     }
 
 
-handleOpened :: TypedMessage Opened AccountMetadata -> BankAccount -> BankAccount
-handleOpened TypedMessage{payload, metadata} bankAccount =
+opened :: TypedMessage Opened AccountMetadata -> BankAccount -> BankAccount
+opened TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { isOpened = True
     , balance = openedBalance payload
@@ -270,32 +276,32 @@ handleOpened TypedMessage{payload, metadata} bankAccount =
     }
 
 
-handleClosed :: TypedMessage Closed AccountMetadata -> BankAccount -> BankAccount
-handleClosed TypedMessage{metadata} bankAccount =
+closed :: TypedMessage Closed AccountMetadata -> BankAccount -> BankAccount
+closed TypedMessage{metadata} bankAccount =
   bankAccount
     { isOpened = False
     , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
     }
 
 
-handleDeposited :: TypedMessage Deposited AccountMetadata -> BankAccount -> BankAccount
-handleDeposited TypedMessage{payload, metadata} bankAccount =
+deposited :: TypedMessage Deposited AccountMetadata -> BankAccount -> BankAccount
+deposited TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { balance = balance bankAccount + depositedAmount payload
     , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
     }
 
 
-handleWithdrawn :: TypedMessage Withdrawn AccountMetadata -> BankAccount -> BankAccount
-handleWithdrawn TypedMessage{payload, metadata} bankAccount =
+withdrawn :: TypedMessage Withdrawn AccountMetadata -> BankAccount -> BankAccount
+withdrawn TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { balance = balance bankAccount - withdrawnAmount payload
     , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
     }
 
 
-handleWithdrawRejected :: TypedMessage WithdrawRejected (Maybe Aeson.Value) -> BankAccount -> BankAccount
-handleWithdrawRejected TypedMessage{payload, createdAtTimestamp} bankAccount =
+withdrawRejected :: TypedMessage WithdrawRejected (Maybe Aeson.Value) -> BankAccount -> BankAccount
+withdrawRejected TypedMessage{payload, createdAtTimestamp} bankAccount =
   let overdraft =
         Overdraft
           { overdraftAmount = rejectedWithdrawAmount payload
@@ -313,11 +319,11 @@ projection :: Projection BankAccount
 projection =
   let handlers =
         ProjectionHandlers.empty
-          & ProjectionHandlers.attach (messageType @Opened) handleOpened
-          & ProjectionHandlers.attach (messageType @Closed) handleClosed
-          & ProjectionHandlers.attach (messageType @Deposited) handleDeposited
-          & ProjectionHandlers.attach (messageType @Withdrawn) handleWithdrawn
-          & ProjectionHandlers.attach (messageType @WithdrawRejected) handleWithdrawRejected
+          & ProjectionHandlers.attach (messageType @Opened) opened
+          & ProjectionHandlers.attach (messageType @Closed) closed
+          & ProjectionHandlers.attach (messageType @Deposited) deposited
+          & ProjectionHandlers.attach (messageType @Withdrawn) withdrawn
+          & ProjectionHandlers.attach (messageType @WithdrawRejected) withdrawRejected
    in Projection
         { initial = initialAccount
         , handlers = handlers
@@ -327,12 +333,11 @@ projection =
 -- * Subscription Stuff
 
 
-processOpen :: Maybe BankAccount -> Open -> Either OpenRejected Opened
-processOpen maybeAccount payload =
-  let accountIsOpen = maybe False isOpened maybeAccount
-      errors =
+open :: BankAccount -> Open -> Either OpenRejected Opened
+open bankAccount payload =
+  let errors =
         Set.fromList . catMaybes $
-          [ if accountIsOpen
+          [ if isOpened bankAccount
               then Just AccountIsAlreadyOpened
               else Nothing
           , if initialDeposit payload < minimumBalance
@@ -344,16 +349,14 @@ processOpen maybeAccount payload =
         else Left $ OpenRejected errors
 
 
-processClose :: Maybe BankAccount -> Close -> Either CloseRejected Closed
-processClose maybeAccount _ =
-  let accountIsOpen = maybe False isOpened maybeAccount
-      currentBalance = maybe 0 balance maybeAccount
-      errors =
+close :: BankAccount -> Close -> Either CloseRejected Closed
+close bankAccount _ =
+  let errors =
         Set.fromList . catMaybes $
-          [ if not accountIsOpen
+          [ if not (isOpened bankAccount)
               then Just AccountIsAlreadyClosed
               else Nothing
-          , if currentBalance /= 0
+          , if balance bankAccount /= 0
               then Just AccountBalanceIsNonZero
               else Nothing
           ]
@@ -362,32 +365,31 @@ processClose maybeAccount _ =
         else Left $ CloseRejected errors
 
 
-processDeposit :: Maybe BankAccount -> Deposit -> Either DepositRejected Deposited
-processDeposit maybeAccount payload =
-  let accountIsOpen = maybe False isOpened maybeAccount
-   in if accountIsOpen
-        then Right . Deposited $ depositAmount payload
-        else
-          Left $
-            DepositRejected
-              { rejectedDepositAmount = depositAmount payload
-              , depositRejectedReason = DepositFromClosedAccount
-              }
+deposit :: BankAccount -> Deposit -> Either DepositRejected Deposited
+deposit bankAccount payload =
+  if isOpened bankAccount
+    then Right . Deposited $ depositAmount payload
+    else
+      Left $
+        DepositRejected
+          { rejectedDepositAmount = depositAmount payload
+          , depositRejectedReason = DepositFromClosedAccount
+          }
 
 
-processWithdraw :: Maybe BankAccount -> Withdraw -> Either WithdrawRejected Withdrawn
-processWithdraw maybeAccount payload =
-  let accountIsOpen = maybe False isOpened maybeAccount
-      currentBalance = maybe 0 balance maybeAccount
-      reject reason =
+withdraw :: BankAccount -> Withdraw -> Either WithdrawRejected Withdrawn
+withdraw bankAccount payload =
+  let reject reason =
         Left
           WithdrawRejected
             { rejectedWithdrawAmount = withdrawAmount payload
             , withdrawRejectedReason = reason
             }
-   in if accountIsOpen
+   in if isOpened bankAccount
         then
-          if (currentBalance >= 0) && (withdrawAmount payload >= 0) && (withdrawAmount payload <= currentBalance)
+          if (balance bankAccount >= 0)
+            && (withdrawAmount payload >= 0)
+            && (withdrawAmount payload <= balance bankAccount)
             then Right . Withdrawn $ withdrawAmount payload
             else reject InsufficientFunds
         else reject WithdrawFromClosedAccount
@@ -400,7 +402,7 @@ handleCommand ::
   , Typeable success
   , Aeson.ToJSON success
   ) =>
-  (Maybe BankAccount -> command -> Either failure success) ->
+  (BankAccount -> command -> Either failure success) ->
   TypedMessage command (Maybe Aeson.Value) ->
   TestApp ()
 handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
@@ -417,15 +419,14 @@ handleCommand processCommand TypedMessage{payload, globalPosition, streamName} =
         targetStream
         projection
 
-  let hasBeenRan =
-        Set.member globalPosition $
-          maybe Set.empty (commandsProcessed . Projection.state) projectedAccount
+  let bankAccount = maybe initialAccount Projection.state projectedAccount
+      hasBeenRan = Set.member globalPosition $ commandsProcessed bankAccount
 
   unless hasBeenRan $ do
     let (eventType, event) =
-          case processCommand (fmap Projection.state projectedAccount) payload of
-            Left rejected -> (messageType @failure, Aeson.toJSON rejected)
-            Right opened -> (messageType @success, Aeson.toJSON opened)
+          case processCommand bankAccount payload of
+            Left failure -> (messageType @failure, Aeson.toJSON failure)
+            Right success -> (messageType @success, Aeson.toJSON success)
 
         metadata = AccountMetadata globalPosition
         expectedVersion = maybe 0 (Functions.ExpectedVersion . Projection.version) projectedAccount
@@ -450,8 +451,8 @@ subscribe =
             let attach eventType processCommand =
                   SubscriptionHandlers.attach eventType (runInIO . handleCommand processCommand)
              in SubscriptionHandlers.empty
-                  & attach (messageType @Open) processOpen
-                  & attach (messageType @Close) processClose
-                  & attach (messageType @Deposit) processDeposit
-                  & attach (messageType @Withdraw) processWithdraw
+                  & attach (messageType @Open) open
+                  & attach (messageType @Close) close
+                  & attach (messageType @Deposit) deposit
+                  & attach (messageType @Withdraw) withdraw
         }
