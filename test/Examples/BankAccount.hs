@@ -300,8 +300,8 @@ withdrawn TypedMessage{payload, metadata} bankAccount =
     }
 
 
-withdrawRejected :: TypedMessage WithdrawRejected (Maybe Aeson.Value) -> BankAccount -> BankAccount
-withdrawRejected TypedMessage{payload, createdAtTimestamp} bankAccount =
+withdrawRejected :: TypedMessage WithdrawRejected AccountMetadata -> BankAccount -> BankAccount
+withdrawRejected TypedMessage{payload, createdAtTimestamp, metadata} bankAccount =
   let overdraft =
         Overdraft
           { overdraftAmount = rejectedWithdrawAmount payload
@@ -312,7 +312,15 @@ withdrawRejected TypedMessage{payload, createdAtTimestamp} bankAccount =
             if withdrawRejectedReason payload == InsufficientFunds
               then overdraft : overdrafts bankAccount
               else overdrafts bankAccount
+        , commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
         }
+
+
+markAsProcessed :: TypedMessage (Maybe Aeson.Value) AccountMetadata -> BankAccount -> BankAccount
+markAsProcessed TypedMessage{metadata} bankAccount =
+  bankAccount
+    { commandsProcessed = Set.insert (createdFrom metadata) (commandsProcessed bankAccount)
+    }
 
 
 projection :: Projection BankAccount
@@ -320,8 +328,11 @@ projection =
   let handlers =
         ProjectionHandlers.empty
           & ProjectionHandlers.attach (messageType @Opened) opened
+          & ProjectionHandlers.attach (messageType @OpenRejected) markAsProcessed
           & ProjectionHandlers.attach (messageType @Closed) closed
+          & ProjectionHandlers.attach (messageType @CloseRejected) markAsProcessed
           & ProjectionHandlers.attach (messageType @Deposited) deposited
+          & ProjectionHandlers.attach (messageType @DepositRejected) markAsProcessed
           & ProjectionHandlers.attach (messageType @Withdrawn) withdrawn
           & ProjectionHandlers.attach (messageType @WithdrawRejected) withdrawRejected
    in Projection
@@ -333,8 +344,8 @@ projection =
 -- * Subscription Stuff
 
 
-open :: BankAccount -> Open -> Either OpenRejected Opened
-open bankAccount payload =
+open :: Open -> BankAccount -> Either OpenRejected Opened
+open payload bankAccount =
   let errors =
         Set.fromList . catMaybes $
           [ if isOpened bankAccount
@@ -349,8 +360,8 @@ open bankAccount payload =
         else Left $ OpenRejected errors
 
 
-close :: BankAccount -> Close -> Either CloseRejected Closed
-close bankAccount _ =
+close :: Close -> BankAccount -> Either CloseRejected Closed
+close _ bankAccount =
   let errors =
         Set.fromList . catMaybes $
           [ if not (isOpened bankAccount)
@@ -365,8 +376,8 @@ close bankAccount _ =
         else Left $ CloseRejected errors
 
 
-deposit :: BankAccount -> Deposit -> Either DepositRejected Deposited
-deposit bankAccount payload =
+deposit :: Deposit -> BankAccount -> Either DepositRejected Deposited
+deposit payload bankAccount =
   if isOpened bankAccount
     then Right . Deposited $ depositAmount payload
     else
@@ -377,8 +388,8 @@ deposit bankAccount payload =
           }
 
 
-withdraw :: BankAccount -> Withdraw -> Either WithdrawRejected Withdrawn
-withdraw bankAccount payload =
+withdraw :: Withdraw -> BankAccount -> Either WithdrawRejected Withdrawn
+withdraw payload bankAccount =
   let reject reason =
         Left
           WithdrawRejected
@@ -402,7 +413,7 @@ handleCommand ::
   , Typeable success
   , Aeson.ToJSON success
   ) =>
-  (BankAccount -> command -> Either failure success) ->
+  (command -> BankAccount -> Either failure success) ->
   TypedMessage command (Maybe Aeson.Value) ->
   TestApp ()
 handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
@@ -424,7 +435,7 @@ handleCommand processCommand TypedMessage{payload, globalPosition, streamName} =
 
   unless hasBeenRan $ do
     let (eventType, event) =
-          case processCommand bankAccount payload of
+          case processCommand payload bankAccount of
             Left failure -> (messageType @failure, Aeson.toJSON failure)
             Right success -> (messageType @success, Aeson.toJSON success)
 
