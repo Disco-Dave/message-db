@@ -42,7 +42,6 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Time (UTCTime)
 import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
-import Data.UUID (UUID)
 import GHC.Generics (Generic)
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
@@ -70,14 +69,6 @@ newtype Money = Money
   deriving (Show, Eq, Ord, Num, Generic)
 instance Aeson.ToJSON Money
 instance Aeson.FromJSON Money
-
-
-newtype AccountId = AccountId
-  { fromAccountId :: UUID
-  }
-  deriving (Show, Eq, Ord, Generic)
-instance Aeson.ToJSON AccountId
-instance Aeson.FromJSON AccountId
 
 
 newtype AccountMetadata = AccountMetadata
@@ -189,7 +180,7 @@ instance Aeson.FromJSON Deposited
 
 
 data DepositRejectedReason
-  = DepositFromClosedAccount
+  = DepositToClosedAccount
   deriving (Show, Eq, Ord, Generic)
 instance Aeson.ToJSON DepositRejectedReason
 instance Aeson.FromJSON DepositRejectedReason
@@ -391,7 +382,7 @@ deposit payload bankAccount =
       Left $
         DepositRejected
           { rejectedDepositAmount = depositAmount payload
-          , depositRejectedReason = DepositFromClosedAccount
+          , depositRejectedReason = DepositToClosedAccount
           }
 
 
