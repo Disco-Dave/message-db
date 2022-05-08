@@ -8,10 +8,16 @@ module Examples.BankAccount
     OpenRejected (..),
     Close (..),
     Closed (..),
+    CloseRejectedReason (..),
+    CloseRejected (..),
     Deposit (..),
     Deposited (..),
+    DepositRejectedReason (..),
+    DepositRejected (..),
     Withdraw (..),
     Withdrawn (..),
+    WithdrawRejectedReason (..),
+    WithdrawRejected (..),
     projection,
     subscribe,
   )
@@ -144,6 +150,22 @@ instance Aeson.ToJSON Closed
 instance Aeson.FromJSON Closed
 
 
+data CloseRejectedReason
+  = AccountIsAlreadyClosed
+  | AccountBalanceIsNonZero
+  deriving (Show, Eq, Ord, Generic)
+instance Aeson.ToJSON CloseRejectedReason
+instance Aeson.FromJSON CloseRejectedReason
+
+
+newtype CloseRejected = CloseRejected
+  { closeRejectedReason :: Set CloseRejectedReason
+  }
+  deriving (Show, Eq, Generic)
+instance Aeson.ToJSON CloseRejected
+instance Aeson.FromJSON CloseRejected
+
+
 newtype Deposit = Deposit
   { depositAmount :: Money
   }
@@ -158,6 +180,22 @@ newtype Deposited = Deposited
   deriving (Show, Eq, Generic)
 instance Aeson.ToJSON Deposited
 instance Aeson.FromJSON Deposited
+
+
+data DepositRejectedReason
+  = DepositFromClosedAccount
+  deriving (Show, Eq, Ord, Generic)
+instance Aeson.ToJSON DepositRejectedReason
+instance Aeson.FromJSON DepositRejectedReason
+
+
+data DepositRejected = DepositRejected
+  { rejectedDepositAmount :: Money
+  , depositRejectedReason :: DepositRejectedReason
+  }
+  deriving (Show, Eq, Generic)
+instance Aeson.ToJSON DepositRejected
+instance Aeson.FromJSON DepositRejected
 
 
 newtype Withdraw = Withdraw
@@ -176,8 +214,17 @@ instance Aeson.ToJSON Withdrawn
 instance Aeson.FromJSON Withdrawn
 
 
-newtype WithdrawRejected = WithdrawRejected
+data WithdrawRejectedReason
+  = WithdrawFromClosedAccount
+  | InsufficientFunds
+  deriving (Show, Eq, Ord, Generic)
+instance Aeson.ToJSON WithdrawRejectedReason
+instance Aeson.FromJSON WithdrawRejectedReason
+
+
+data WithdrawRejected = WithdrawRejected
   { rejectedWithdrawAmount :: Money
+  , withdrawRejectedReason :: WithdrawRejectedReason
   }
   deriving (Show, Eq, Generic)
 instance Aeson.ToJSON WithdrawRejected
@@ -255,7 +302,10 @@ handleWithdrawRejected TypedMessage{payload, createdAtTimestamp} bankAccount =
           , overdraftTime = coerce createdAtTimestamp
           }
    in bankAccount
-        { overdrafts = overdraft : overdrafts bankAccount
+        { overdrafts =
+            if withdrawRejectedReason payload == InsufficientFunds
+              then overdraft : overdrafts bankAccount
+              else overdrafts bankAccount
         }
 
 
@@ -294,7 +344,56 @@ processOpen maybeAccount payload =
         else Left $ OpenRejected errors
 
 
-handleEither ::
+processClose :: Maybe BankAccount -> Close -> Either CloseRejected Closed
+processClose maybeAccount _ =
+  let accountIsOpen = maybe False isOpened maybeAccount
+      currentBalance = maybe 0 balance maybeAccount
+      errors =
+        Set.fromList . catMaybes $
+          [ if not accountIsOpen
+              then Just AccountIsAlreadyClosed
+              else Nothing
+          , if currentBalance /= 0
+              then Just AccountBalanceIsNonZero
+              else Nothing
+          ]
+   in if Set.null errors
+        then Right Closed
+        else Left $ CloseRejected errors
+
+
+processDeposit :: Maybe BankAccount -> Deposit -> Either DepositRejected Deposited
+processDeposit maybeAccount payload =
+  let accountIsOpen = maybe False isOpened maybeAccount
+   in if accountIsOpen
+        then Right . Deposited $ depositAmount payload
+        else
+          Left $
+            DepositRejected
+              { rejectedDepositAmount = depositAmount payload
+              , depositRejectedReason = DepositFromClosedAccount
+              }
+
+
+processWithdraw :: Maybe BankAccount -> Withdraw -> Either WithdrawRejected Withdrawn
+processWithdraw maybeAccount payload =
+  let accountIsOpen = maybe False isOpened maybeAccount
+      currentBalance = maybe 0 balance maybeAccount
+      reject reason =
+        Left
+          WithdrawRejected
+            { rejectedWithdrawAmount = withdrawAmount payload
+            , withdrawRejectedReason = reason
+            }
+   in if accountIsOpen
+        then
+          if (currentBalance >= 0) && (withdrawAmount payload >= 0) && (withdrawAmount payload <= currentBalance)
+            then Right . Withdrawn $ withdrawAmount payload
+            else reject InsufficientFunds
+        else reject WithdrawFromClosedAccount
+
+
+handleCommand ::
   forall command failure success.
   ( Typeable failure
   , Aeson.ToJSON failure
@@ -304,7 +403,7 @@ handleEither ::
   (Maybe BankAccount -> command -> Either failure success) ->
   TypedMessage command (Maybe Aeson.Value) ->
   TestApp ()
-handleEither processor TypedMessage{payload, globalPosition, streamName} = do
+handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
   Just identityName <- pure $ StreamName.identity streamName
 
   let targetStream = StreamName.addIdentity entityCategory identityName
@@ -324,7 +423,7 @@ handleEither processor TypedMessage{payload, globalPosition, streamName} = do
 
   unless hasBeenRan $ do
     let (eventType, event) =
-          case processor (fmap Projection.state projectedAccount) payload of
+          case processCommand (fmap Projection.state projectedAccount) payload of
             Left rejected -> (messageType @failure, Aeson.toJSON rejected)
             Right opened -> (messageType @success, Aeson.toJSON opened)
 
@@ -348,6 +447,11 @@ subscribe =
     pure $
       (Subscription.subscribe commandCategory)
         { Subscription.handlers =
-            SubscriptionHandlers.empty
-              & SubscriptionHandlers.attach (messageType @Open) (runInIO . handleEither processOpen)
+            let attach eventType processCommand =
+                  SubscriptionHandlers.attach eventType (runInIO . handleCommand processCommand)
+             in SubscriptionHandlers.empty
+                  & attach (messageType @Open) processOpen
+                  & attach (messageType @Close) processClose
+                  & attach (messageType @Deposit) processDeposit
+                  & attach (messageType @Withdraw) processWithdraw
         }
