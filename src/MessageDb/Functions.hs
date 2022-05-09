@@ -35,12 +35,6 @@ import Numeric.Natural (Natural)
 type WithConnection = forall records. (Postgres.Connection -> IO records) -> IO records
 
 
-newtype ExpectedVersion = ExpectedVersion
-  { fromExpectedVersion :: Message.StreamPosition
-  }
-  deriving (Show, Eq, Ord, Num)
-
-
 data ConsumerGroup = ConsumerGroup
   { consumerGroupMember :: Natural
   , consumerGroupSize :: Natural
@@ -58,6 +52,19 @@ newtype Correlation = Correlation
   { fromCorrelation :: Text
   }
   deriving (Show, Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
+
+
+data ExpectedVersion
+  = DoesNotExist
+  | StreamVersion Message.StreamPosition
+  deriving (Show, Eq, Ord)
+
+
+expectedVersionToInteger :: ExpectedVersion -> Integer
+expectedVersionToInteger expectedVersion =
+  case expectedVersion of
+    DoesNotExist -> -1
+    StreamVersion position -> fromIntegral position
 
 
 data BatchSize
@@ -162,7 +169,7 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
         , Message.fromMessageType messageType
         , Aeson.toJSON payload
         , fmap Aeson.toJSON metadata
-        , fmap (Message.fromStreamPosition . fromExpectedVersion) expectedVersion
+        , fmap expectedVersionToInteger expectedVersion
         )
 
   [Postgres.Only position] <-

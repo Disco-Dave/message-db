@@ -1,4 +1,6 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Replace case with maybe" #-}
 
 module Examples.BankAccount
   ( Money (..),
@@ -20,6 +22,8 @@ module Examples.BankAccount
     WithdrawRejected (..),
     Overdraft (..),
     BankAccount (..),
+    commandCategory,
+    entityCategory,
     projection,
     open,
     close,
@@ -39,9 +43,8 @@ import Data.Maybe (catMaybes)
 import qualified Data.Pool as Pool
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import Data.Time (UTCTime)
-import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
@@ -77,12 +80,6 @@ newtype AccountMetadata = AccountMetadata
   deriving (Show, Eq, Ord, Generic)
 instance Aeson.ToJSON AccountMetadata
 instance Aeson.FromJSON AccountMetadata
-
-
-messageType :: forall event. Typeable event => Message.MessageType
-messageType =
-  let eventName = Text.pack . show . typeRep $ Proxy @event
-   in Message.MessageType eventName
 
 
 commandCategory :: CategoryName
@@ -325,14 +322,14 @@ projection :: Projection BankAccount
 projection =
   let handlers =
         ProjectionHandlers.empty
-          & ProjectionHandlers.attach (messageType @Opened) opened
-          & ProjectionHandlers.attach (messageType @OpenRejected) markAsProcessed
-          & ProjectionHandlers.attach (messageType @Closed) closed
-          & ProjectionHandlers.attach (messageType @CloseRejected) markAsProcessed
-          & ProjectionHandlers.attach (messageType @Deposited) deposited
-          & ProjectionHandlers.attach (messageType @DepositRejected) markAsProcessed
-          & ProjectionHandlers.attach (messageType @Withdrawn) withdrawn
-          & ProjectionHandlers.attach (messageType @WithdrawRejected) withdrawRejected
+          & ProjectionHandlers.attach (Message.typeOf @Opened) opened
+          & ProjectionHandlers.attach (Message.typeOf @OpenRejected) markAsProcessed
+          & ProjectionHandlers.attach (Message.typeOf @Closed) closed
+          & ProjectionHandlers.attach (Message.typeOf @CloseRejected) markAsProcessed
+          & ProjectionHandlers.attach (Message.typeOf @Deposited) deposited
+          & ProjectionHandlers.attach (Message.typeOf @DepositRejected) markAsProcessed
+          & ProjectionHandlers.attach (Message.typeOf @Withdrawn) withdrawn
+          & ProjectionHandlers.attach (Message.typeOf @WithdrawRejected) withdrawRejected
    in Projection
         { initial = initialAccount
         , handlers = handlers
@@ -434,14 +431,17 @@ handleCommand processCommand TypedMessage{payload, globalPosition, streamName} =
   unless hasBeenRan $ do
     let (eventType, event) =
           case processCommand payload bankAccount of
-            Left failure -> (messageType @failure, Aeson.toJSON failure)
-            Right success -> (messageType @success, Aeson.toJSON success)
+            Left failure -> (Message.typeOf @failure, Aeson.toJSON failure)
+            Right success -> (Message.typeOf @success, Aeson.toJSON success)
 
         metadata = AccountMetadata globalPosition
-        expectedVersion = maybe 0 (Functions.ExpectedVersion . Projection.version) projectedAccount
+        expectedVersion =
+          case fmap Projection.version projectedAccount of
+            Nothing -> Functions.DoesNotExist
+            Just position -> Functions.StreamVersion position
 
     TestApp.withConnection $ \connection ->
-      void . liftIO $
+      liftIO . void $
         Functions.writeMessage
           connection
           targetStream
@@ -460,8 +460,8 @@ subscribe =
             let attach eventType processCommand =
                   SubscriptionHandlers.attach eventType (runInIO . handleCommand processCommand)
              in SubscriptionHandlers.empty
-                  & attach (messageType @Open) open
-                  & attach (messageType @Close) close
-                  & attach (messageType @Deposit) deposit
-                  & attach (messageType @Withdraw) withdraw
+                  & attach (Message.typeOf @Open) open
+                  & attach (Message.typeOf @Close) close
+                  & attach (Message.typeOf @Deposit) deposit
+                  & attach (Message.typeOf @Withdraw) withdraw
         }

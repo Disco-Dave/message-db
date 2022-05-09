@@ -9,6 +9,7 @@ module MessageDb.Message
     Metadata (..),
     Message (..),
     parsePayload,
+    typeOf,
     typedPayload,
     parseMetadata,
     typedMetadata,
@@ -20,9 +21,12 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
 import Data.Coerce (coerce)
 import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (..))
 import Data.String (IsString)
 import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Time (UTCTime)
+import Data.Typeable (Typeable, typeRep)
 import Data.UUID (UUID)
 import qualified Data.UUID.V4 as UUID.V4
 import Database.PostgreSQL.Simple.FromField (FromField)
@@ -66,6 +70,12 @@ newtype MessageType = MessageType
   deriving (Show, Eq, Ord, IsString)
 
 
+typeOf :: forall payload. Typeable payload => MessageType
+typeOf =
+  let eventName = Text.pack . show . typeRep $ Proxy @payload
+   in MessageType eventName
+
+
 instance Aeson.ToJSON MessageType where
   toJSON = Aeson.toJSON . fromMessageType
   toEncoding = Aeson.toEncoding . fromMessageType
@@ -86,7 +96,7 @@ instance FromField MessageType where
 newtype StreamPosition = StreamPosition
   { fromStreamPosition :: Integer
   }
-  deriving (Show, Eq, Ord, Num)
+  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
 
 
 instance Aeson.ToJSON StreamPosition where
@@ -110,7 +120,7 @@ instance FromField StreamPosition where
 newtype GlobalPosition = GlobalPosition
   { fromGlobalPosition :: Integer
   }
-  deriving (Show, Eq, Ord, Num)
+  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
 
 
 instance Aeson.ToJSON GlobalPosition where

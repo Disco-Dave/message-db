@@ -107,7 +107,7 @@ fetch withConnection batchSize streamName projection =
                  in query nextPosition updatedProjectedState
           _ ->
             pure $
-              if batchSize == Functions.Unlimited
+              if position <= 0
                 then Nothing
                 else Just projected
    in fmap reverseUnprocessed <$> query 0 (empty $ initial projection)
