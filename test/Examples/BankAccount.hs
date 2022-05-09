@@ -48,6 +48,8 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
+import MessageDb.ObjectMetadata (ObjectMetadata)
+import qualified MessageDb.ObjectMetadata as ObjectMetadata
 import MessageDb.Projection (Projection (Projection))
 import qualified MessageDb.Projection as Projection
 import qualified MessageDb.Projection.Handlers as ProjectionHandlers

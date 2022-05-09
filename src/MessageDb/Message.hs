@@ -227,7 +227,7 @@ data Message = Message
 
 parseJson :: Aeson.FromJSON value => Maybe Aeson.Value -> Either String value
 parseJson column =
-  let json = fromMaybe (Aeson.toJSON @(Maybe ()) Nothing) (coerce column)
+  let json = fromMaybe Aeson.Null (coerce column)
    in AesonTypes.parseEither Aeson.parseJSON json
 
 
