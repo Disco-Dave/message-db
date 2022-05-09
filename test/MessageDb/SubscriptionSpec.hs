@@ -20,7 +20,7 @@ newAccountId = do
 spec :: Spec
 spec =
   describe "Bank Account Example" . around (TestApp.withSubscriptions [BankAccount.subscribe]) $
-    fit "can open an account" $ \testAppData -> do
+    it "can open an account" $ \testAppData -> do
       accountId <- newAccountId
 
       let connectionPool = TestApp.connectionPool testAppData
@@ -56,7 +56,5 @@ spec =
           Nothing
           Nothing
           Nothing
-
-      print messages
 
       length messages `shouldBe` 2

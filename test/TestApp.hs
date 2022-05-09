@@ -139,6 +139,6 @@ blockUntilCategoryHas categoryName numberOfMessages = do
 
   if currentNumberOfMessages < numberOfMessages
     then do
-      threadDelay 100_000
+      threadDelay 50_000
       blockUntilCategoryHas categoryName numberOfMessages
     else pure ()
