@@ -30,6 +30,7 @@ import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
 import MessageDb.StreamName (CategoryName, StreamName, fromCategoryName, fromStreamName)
 import Numeric.Natural (Natural)
+import MessageDb.Units (NumberOfMessages)
 
 
 type WithConnection = forall records. (Postgres.Connection -> IO records) -> IO records
@@ -64,11 +65,11 @@ expectedVersionToInteger :: ExpectedVersion -> Integer
 expectedVersionToInteger expectedVersion =
   case expectedVersion of
     DoesNotExist -> -1
-    StreamVersion position -> fromIntegral position
+    StreamVersion position -> toInteger position
 
 
 data BatchSize
-  = FixedSize Natural
+  = FixedSize NumberOfMessages
   | Unlimited
   deriving (Show, Eq)
 

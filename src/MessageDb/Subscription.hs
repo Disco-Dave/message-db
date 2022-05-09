@@ -71,7 +71,7 @@ start withConnection Subscription{..} = do
             connection
             categoryName
             (Just position)
-            (Just . Functions.FixedSize $ fromNumberOfMessage messagesPerTick)
+            (Just $ Functions.FixedSize messagesPerTick)
             correlation
             consumerGroup
             condition

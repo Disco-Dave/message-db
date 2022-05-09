@@ -10,10 +10,10 @@ import Numeric.Natural (Natural)
 newtype NumberOfMessages = NumberOfMessages
   { fromNumberOfMessage :: Natural
   }
-  deriving (Show, Eq, Ord, Num)
+  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
 
 
 newtype Microseconds = Microseconds
   { fromMicroseconds :: Natural
   }
-  deriving (Show, Eq, Ord, Num)
+  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
