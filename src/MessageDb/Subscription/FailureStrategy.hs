@@ -8,7 +8,7 @@ module MessageDb.Subscription.FailureStrategy
   )
 where
 
-import Control.Exception (SomeException)
+import Control.Exception (Exception, SomeException)
 import Control.Exception.Safe (finally)
 import Control.Monad (void, when)
 import qualified Data.Text as Text
@@ -27,6 +27,7 @@ data FailureReason
   = HandleFailure HandleError
   | UnknownFailure SomeException
   deriving (Show)
+instance Exception FailureReason
 
 
 newtype FailureStrategy = FailureStrategy

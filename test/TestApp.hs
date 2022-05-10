@@ -98,7 +98,8 @@ withSubscriptions makeSubscriptions useTestAppData = run $ do
         startAll = Async.mapConcurrently_ startSubscription
      in startAll <$> sequenceA makeSubscriptions
 
-  liftIO . Async.withAsync subscriptions $ \_ ->
+  liftIO . Async.withAsync subscriptions $ \task -> do
+    Async.link task
     useTestAppData testAppData
 
 

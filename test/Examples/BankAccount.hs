@@ -48,8 +48,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
-import MessageDb.ObjectMetadata (ObjectMetadata)
-import qualified MessageDb.ObjectMetadata as ObjectMetadata
 import MessageDb.Projection (Projection (Projection))
 import qualified MessageDb.Projection as Projection
 import qualified MessageDb.Projection.Handlers as ProjectionHandlers
@@ -57,12 +55,13 @@ import MessageDb.StreamName (CategoryName)
 import qualified MessageDb.StreamName as StreamName
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
+import MessageDb.Subscription.FailureStrategy (FailureStrategy (..))
 import qualified MessageDb.Subscription.Handlers as SubscriptionHandlers
 import MessageDb.TypedMessage (TypedMessage (TypedMessage))
 import qualified MessageDb.TypedMessage as TypedMessage
 import TestApp (TestApp, TestAppData (TestAppData, connectionPool))
 import qualified TestApp
-import UnliftIO (MonadUnliftIO (withRunInIO))
+import UnliftIO (MonadUnliftIO (withRunInIO), throwIO)
 
 
 -- * Primitive types and functions used throughout
@@ -458,7 +457,8 @@ subscribe =
   withRunInIO $ \runInIO ->
     pure $
       (Subscription.subscribe commandCategory)
-        { Subscription.handlers =
+        { Subscription.failureStrategy = FailureStrategy $ \_ reason -> throwIO reason
+        , Subscription.handlers =
             let attach eventType processCommand =
                   SubscriptionHandlers.attach eventType (runInIO . handleCommand processCommand)
              in SubscriptionHandlers.empty
