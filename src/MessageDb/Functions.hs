@@ -8,6 +8,8 @@ module MessageDb.Functions
     Condition (..),
     ConsumerGroup (..),
     Correlation (..),
+    ExpectedVersionViolation (..),
+    parseExpectedVersionViolation,
     lookupById,
     lookupByPosition,
     writeMessage,
@@ -18,7 +20,9 @@ module MessageDb.Functions
   )
 where
 
+import Control.Exception (Exception, handle, throwIO)
 import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Char8 as Char8
 import Data.Maybe (listToMaybe)
 import Data.String (IsString)
 import Data.Text (Text)
@@ -29,8 +33,8 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
 import MessageDb.StreamName (CategoryName, StreamName, fromCategoryName, fromStreamName)
-import Numeric.Natural (Natural)
 import MessageDb.Units (NumberOfMessages)
+import Numeric.Natural (Natural)
 
 
 type WithConnection = forall records. (Postgres.Connection -> IO records) -> IO records
@@ -66,6 +70,45 @@ expectedVersionToInteger expectedVersion =
   case expectedVersion of
     DoesNotExist -> -1
     StreamVersion position -> toInteger position
+
+
+newtype ExpectedVersionViolation = ExpectedVersionViolation
+  { fromExpectedVersionViolation :: Postgres.SqlError
+  }
+  deriving (Show, Eq)
+instance Exception ExpectedVersionViolation
+
+
+parseExpectedVersionViolation :: Postgres.SqlError -> Maybe ExpectedVersionViolation
+parseExpectedVersionViolation sqlError@Postgres.SqlError{..} =
+  {- Example error of what we are looking for
+
+        SqlError
+          { sqlState = "P0001"
+          , sqlExecStatus = FatalError
+          , sqlErrorMsg = "Wrong expected version: 4 (Stream: AqZHVQR4-Pn85sUkra3, Stream Version: 10)"
+          , sqlErrorDetail = ""
+          , sqlErrorHint = ""
+          }
+
+  -}
+
+  let seemsLikeTheRightErrorMessages =
+        "Wrong expected version:" `Char8.isPrefixOf` sqlErrorMsg
+
+      isTheCorrectErrorState =
+        sqlState == "P0001"
+
+      isTheCorrectExecStatus =
+        sqlExecStatus == Postgres.FatalError
+
+      isProbablyTheRightError =
+        seemsLikeTheRightErrorMessages
+          && isTheCorrectErrorState
+          && isTheCorrectExecStatus
+   in if isProbablyTheRightError
+        then Just $ ExpectedVersionViolation sqlError
+        else Nothing
 
 
 data BatchSize
@@ -173,8 +216,16 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
         , fmap expectedVersionToInteger expectedVersion
         )
 
+      handleSqlError sqlError =
+        case parseExpectedVersionViolation sqlError of
+          Nothing ->
+            throwIO sqlError
+          Just expectedVersionViolation ->
+            throwIO expectedVersionViolation
+
   [Postgres.Only position] <-
-    Postgres.query connection query params
+    handle handleSqlError $
+      Postgres.query connection query params
 
   pure (messageId, Message.StreamPosition position)
 

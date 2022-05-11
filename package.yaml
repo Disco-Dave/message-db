@@ -37,6 +37,7 @@ library:
   source-dirs: src
   dependencies:
     - aeson
+    - bytestring
     - containers
     - postgresql-simple
     - safe-exceptions

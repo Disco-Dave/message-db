@@ -172,19 +172,19 @@ spec =
           payload <- Gen.sample genPayload
           metadata <- Gen.sample $ Gen.maybe genMetadata
 
-          try @_ @Simple.SqlError $
+          try @_ @Functions.ExpectedVersionViolation $
             Functions.writeMessage
               connection
               streamName
               messageType
               payload
               metadata
-              (Just  $ Functions.StreamVersion 4)
+              (Just $ Functions.StreamVersion 4)
 
         let actualErrorMessage =
               case results of
                 Right _ -> ""
-                Left err -> Simple.sqlErrorMsg err
+                Left (Functions.ExpectedVersionViolation err) -> Simple.sqlErrorMsg err
 
             expectedErrorMessage =
               let streamNameBS = encodeUtf8 (fromStreamName streamName)
