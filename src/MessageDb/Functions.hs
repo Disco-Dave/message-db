@@ -338,7 +338,7 @@ streamVersion :: Postgres.Connection -> StreamName -> IO (Maybe Message.StreamPo
 streamVersion connection streamName = do
   let query =
         [sql|
-          SELECT * FROM message_store.stream_version (
+          SELECT message_store.stream_version (
             stream_name => ?
           );
         |]

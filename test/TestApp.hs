@@ -94,13 +94,13 @@ withSubscriptions makeSubscriptions useTestAppData = run $ do
   testAppData@TestAppData{connectionPool} <- ask
 
   subscriptions <-
-    let startSubscription = Subscription.start (Pool.withResource connectionPool)
+    let startSubscription = liftIO . Subscription.start (Pool.withResource connectionPool)
         startAll = Async.mapConcurrently_ startSubscription
      in startAll <$> sequenceA makeSubscriptions
 
-  liftIO . Async.withAsync subscriptions $ \task -> do
+  Async.withAsync subscriptions $ \task -> do
     Async.link task
-    useTestAppData testAppData
+    liftIO $ useTestAppData testAppData
 
 
 blockUntilStreamHas :: StreamName -> NumberOfMessages -> TestApp ()

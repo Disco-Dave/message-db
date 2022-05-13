@@ -4,6 +4,7 @@
 
 module Examples.BankAccount
   ( Money (..),
+    AccountId (..),
     Open (..),
     Opened (..),
     OpenRejectedReason (..),
@@ -22,8 +23,11 @@ module Examples.BankAccount
     WithdrawRejected (..),
     Overdraft (..),
     BankAccount (..),
+    newAccountId,
     commandCategory,
+    commandStream,
     entityCategory,
+    entityStream,
     projection,
     open,
     close,
@@ -43,15 +47,18 @@ import Data.Maybe (catMaybes)
 import qualified Data.Pool as Pool
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.Typeable (Typeable)
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUID.V4
 import GHC.Generics (Generic)
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
 import MessageDb.Projection (Projection (Projection))
 import qualified MessageDb.Projection as Projection
 import qualified MessageDb.Projection.Handlers as ProjectionHandlers
-import MessageDb.StreamName (CategoryName)
+import MessageDb.StreamName (CategoryName, StreamName)
 import qualified MessageDb.StreamName as StreamName
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
@@ -83,14 +90,36 @@ instance Aeson.ToJSON AccountMetadata
 instance Aeson.FromJSON AccountMetadata
 
 
+newtype AccountId = AccountId
+  { fromAccountId :: Text
+  }
+  deriving (Show, Eq, Ord)
+
+
+newAccountId :: IO AccountId
+newAccountId = do
+  uuid <- UUID.V4.nextRandom
+  pure . AccountId $ UUID.toText uuid
+
+
 commandCategory :: CategoryName
 commandCategory =
   StreamName.category "bankAccount:command"
 
 
+commandStream :: AccountId -> StreamName
+commandStream =
+  StreamName.addIdentity commandCategory . coerce
+
+
 entityCategory :: CategoryName
 entityCategory =
   StreamName.category "bankAccount"
+
+
+entityStream :: AccountId -> StreamName
+entityStream =
+  StreamName.addIdentity entityCategory . coerce
 
 
 minimumBalance :: Money
@@ -413,9 +442,9 @@ handleCommand ::
   TypedMessage command (Maybe Message.Metadata) ->
   TestApp ()
 handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
-  Just identityName <- pure $ StreamName.identity streamName
+  Just accountId <- pure . coerce $ StreamName.identity streamName
 
-  let targetStream = StreamName.addIdentity entityCategory identityName
+  let targetStream = entityStream accountId
 
   TestAppData{connectionPool} <- ask
   projectedAccount <-

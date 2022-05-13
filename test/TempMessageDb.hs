@@ -6,7 +6,10 @@ module TempMessageDb
   )
 where
 
+import Control.Exception (Exception, IOException)
 import Control.Monad (void)
+import Control.Monad.Catch (Handler (Handler))
+import qualified Control.Retry as Retry
 import Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -90,20 +93,32 @@ withDatabaseUrl use = do
               ]
           }
 
-  result <- PostgresTemp.withConfig tempConfig $ \db ->
-    let options = PostgresTemp.toConnectionOptions db
-        dbUrl =
-          PostgresOptions.toConnectionString $
-            options
-              { PostgresOptions.user = pure "test_user"
-              , PostgresOptions.password = pure "password"
-              , PostgresOptions.dbname = pure "message_store"
-              }
-     in migrate options *> use dbUrl
+  let retryPolicy =
+        Retry.capDelay 1_000_000 $
+          Retry.exponentialBackoff 1_000
 
-  case result of
-    Left err -> UnliftIO.throwIO err
-    Right value -> pure value
+      exceptionHandlers =
+        let restartFor :: forall e a. Exception e => a -> Handler IO Bool
+            restartFor _ = Handler @_ @_ @e $ \_ -> pure True
+         in [ restartFor @PostgresTemp.StartError
+            , restartFor @IOException
+            ]
+
+  Retry.recovering retryPolicy exceptionHandlers $ \_ -> do
+    result <- PostgresTemp.withConfig tempConfig $ \db ->
+      let options = PostgresTemp.toConnectionOptions db
+          dbUrl =
+            PostgresOptions.toConnectionString $
+              options
+                { PostgresOptions.user = pure "test_user"
+                , PostgresOptions.password = pure "password"
+                , PostgresOptions.dbname = pure "message_store"
+                }
+       in migrate options *> use dbUrl
+
+    case result of
+      Left err -> UnliftIO.throwIO err
+      Right value -> pure value
 
 
 withConnection :: (Postgres.Connection -> IO a) -> IO a

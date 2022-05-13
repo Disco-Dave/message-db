@@ -15,6 +15,8 @@ import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
 import MessageDb.StreamName (StreamName)
 import MessageDb.Units (NumberOfMessages (..))
+import Data.Coerce (coerce)
+import Numeric.Natural (Natural)
 
 
 type LastPositionSaved = Message.GlobalPosition
@@ -36,7 +38,10 @@ dontSave =
     }
 
 
-type PositionUpdateInterval = NumberOfMessages
+newtype PositionUpdateInterval = PositioUpdateInterval
+  { fromPositionUpdateInterval :: NumberOfMessages
+  }
+  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
 
 
 writeToStream :: Functions.WithConnection -> PositionUpdateInterval -> StreamName -> PositionStrategy
@@ -67,7 +72,7 @@ writeToStream withConnection positionUpdateInterval streamName =
 
       save :: LastPositionSaved -> CurrentPosition -> IO (Maybe PositionSaved)
       save lastPositionSaved currentPosition =
-        let interval = fromIntegral $ fromNumberOfMessage positionUpdateInterval
+        let interval = fromIntegral $ coerce @_ @Natural positionUpdateInterval
             difference = Message.fromGlobalPosition $ currentPosition - lastPositionSaved
          in if difference < interval
               then pure Nothing

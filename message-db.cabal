@@ -68,6 +68,7 @@ test-suite message-db-test
       Generators.StreamName
       MessageDb.FunctionsSpec
       MessageDb.StreamNameSpec
+      MessageDb.Subscription.PositionStrategySpec
       MessageDb.SubscriptionSpec
       Properties
       Spec
@@ -96,6 +97,7 @@ test-suite message-db-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , exceptions
     , hedgehog
     , hspec
     , hspec-hedgehog
@@ -104,6 +106,7 @@ test-suite message-db-test
     , postgres-options
     , postgresql-simple
     , resource-pool
+    , retry
     , text
     , time
     , tmp-postgres

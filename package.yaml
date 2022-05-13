@@ -1,6 +1,5 @@
 name: message-db
 version: 0.0.0.1
-
 ghc-options:
   - -Weverything
   - -Wno-all-missed-specialisations
@@ -58,6 +57,7 @@ tests:
       - aeson
       - bytestring
       - containers
+      - exceptions
       - hedgehog
       - hspec
       - hspec-hedgehog
@@ -66,6 +66,7 @@ tests:
       - postgres-options
       - postgresql-simple
       - resource-pool
+      - retry
       - text
       - time
       - tmp-postgres
