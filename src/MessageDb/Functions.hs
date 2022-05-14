@@ -23,16 +23,18 @@ where
 import Control.Exception (Exception, handle, throwIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as Char8
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (listToMaybe)
 import Data.String (IsString)
 import Data.Text (Text)
+import qualified Data.Time as Time
 import qualified Data.UUID as UUID
 import qualified Database.PostgreSQL.Simple as Postgres
-import Database.PostgreSQL.Simple.FromRow (RowParser, field)
+import qualified Database.PostgreSQL.Simple.FromField as FromField
+import Database.PostgreSQL.Simple.FromRow (RowParser, field, fieldWith)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
-import MessageDb.StreamName (CategoryName, StreamName, fromCategoryName, fromStreamName)
+import MessageDb.StreamName (CategoryName, StreamName (StreamName), fromCategoryName, fromStreamName)
 import MessageDb.Units (NumberOfMessages)
 import Numeric.Natural (Natural)
 
@@ -124,16 +126,54 @@ batchSizeToInteger batchSize =
     Unlimited -> -1
 
 
-messageParser :: RowParser Message
-messageParser = do
-  messageId <- field
-  streamName <- field
-  messageType <- field
-  streamPosition <- field
-  globalPosition <- field
-  payload <- fromMaybe (Message.Payload Aeson.Null) <$> field
-  metadata <- fromMaybe (Message.Metadata Aeson.Null) <$> field
-  createdAtTimestamp <- field
+createdAtTimestampField :: RowParser Message.CreatedAtTimestamp
+createdAtTimestampField =
+  Message.CreatedAtTimestamp . Time.localTimeToUTC Time.utc <$> field
+
+
+fromTable :: RowParser Message
+fromTable = do
+  messageId <- fmap Message.MessageId field
+  streamName <- fmap StreamName field
+  messageType <- fmap Message.MessageType field
+  streamPosition <- fmap Message.StreamPosition field
+  globalPosition <- fmap Message.GlobalPosition field
+  payload <- maybe Message.nullPayload Message.Payload <$> field
+  metadata <- maybe Message.nullMetadata Message.Metadata <$> field
+  createdAtTimestamp <- createdAtTimestampField
+  pure Message{..}
+
+
+fromFunction :: RowParser Message
+fromFunction = do
+  messageId <- fieldWith $ \f mdata -> do
+    text <- FromField.fromField f mdata
+    case UUID.fromText text of
+      Nothing -> FromField.returnError FromField.Incompatible f "Invalid UUID"
+      Just uuid -> pure $ Message.MessageId uuid
+
+  streamName <- fmap StreamName field
+  messageType <- fmap Message.MessageType field
+  streamPosition <- fmap Message.StreamPosition field
+  globalPosition <- fmap Message.GlobalPosition field
+
+  payload <- do
+    maybeByteString <- field
+    pure $
+      maybe
+        Message.nullPayload
+        Message.Payload
+        (Aeson.decodeStrict =<< maybeByteString)
+
+  metadata <- do
+    maybeByteString <- field
+    pure $
+      maybe
+        Message.nullMetadata
+        Message.Metadata
+        (Aeson.decodeStrict =<< maybeByteString)
+
+  createdAtTimestamp <- createdAtTimestampField
   pure Message{..}
 
 
@@ -142,19 +182,19 @@ lookupById connection messageId = do
   let query =
         [sql|
           SELECT 
-            id::uuid
+            id
             ,stream_name
             ,type
             ,position
             ,global_position
-            ,data::jsonb
-            ,metadata::jsonb
-            ,time::timestamptz
+            ,data
+            ,metadata
+            ,time
           FROM message_store.messages
           WHERE id = ?;
         |]
 
-  messages <- Postgres.queryWith messageParser connection query (Postgres.Only messageId)
+  messages <- Postgres.queryWith fromTable connection query (Postgres.Only $ Message.fromMessageId messageId)
 
   pure $ listToMaybe messages
 
@@ -164,19 +204,19 @@ lookupByPosition connection position = do
   let query =
         [sql|
           SELECT 
-            id::uuid
+            id
             ,stream_name
             ,type
             ,position
             ,global_position
-            ,data::jsonb
-            ,metadata::jsonb
-            ,time::timestamptz
+            ,data
+            ,metadata
+            ,time
           FROM message_store.messages
           WHERE global_position = ?;
         |]
 
-  messages <- Postgres.queryWith messageParser connection query (Postgres.Only position)
+  messages <- Postgres.queryWith fromTable connection query (Postgres.Only $ Message.fromGlobalPosition position)
 
   pure $ listToMaybe messages
 
@@ -242,14 +282,14 @@ getStreamMessages connection streamName position batchSize condition =
   let query =
         [sql|
           SELECT 
-            id::uuid
+            id
             ,stream_name
             ,type
             ,position
             ,global_position
-            ,data::jsonb
-            ,metadata::jsonb
-            ,time::timestamptz
+            ,data
+            ,metadata
+            ,time
           FROM message_store.get_stream_messages (
             stream_name => ?
             ,"position" => ?
@@ -263,7 +303,7 @@ getStreamMessages connection streamName position batchSize condition =
         , maybe 1000 batchSizeToInteger batchSize
         , fmap fromCondition condition
         )
-   in Postgres.queryWith messageParser connection query params
+   in Postgres.queryWith fromFunction connection query params
 
 
 -- | Retrieve messages from a category of streams, optionally specifying the starting position, the number of messages to retrieve, the correlation category for Pub/Sub, consumer group parameters, and an additional condition that will be appended to the SQL command's WHERE clause.
@@ -280,14 +320,14 @@ getCategoryMessages connection category position batchSize correlation consumerG
   let query =
         [sql|
           SELECT 
-            id::uuid
+            id
             ,stream_name
             ,type
             ,position
             ,global_position
-            ,data::jsonb
-            ,metadata::jsonb
-            ,time::timestamptz
+            ,data
+            ,metadata
+            ,time
           FROM message_store.get_category_messages (
             category => ?
             ,"position" => ?
@@ -307,7 +347,7 @@ getCategoryMessages connection category position batchSize correlation consumerG
         , fmap (toInteger . consumerGroupSize) consumerGroup
         , fmap fromCondition condition
         )
-   in Postgres.queryWith messageParser connection query params
+   in Postgres.queryWith fromFunction connection query params
 
 
 -- | Row from the messages table that corresponds to the highest position number in the stream.
@@ -316,21 +356,21 @@ getLastStreamMessage connection streamName =
   let query =
         [sql|
           SELECT 
-            id::uuid
+            id
             ,stream_name
             ,type
             ,position
             ,global_position
-            ,data::jsonb
-            ,metadata::jsonb
-            ,time::timestamptz
+            ,data
+            ,metadata
+            ,time
           FROM message_store.get_last_stream_message (
             stream_name => ?
           );
         |]
       params =
         Postgres.Only (fromStreamName streamName)
-   in listToMaybe <$> Postgres.queryWith messageParser connection query params
+   in listToMaybe <$> Postgres.queryWith fromFunction connection query params
 
 
 -- | Highest position number in the stream.

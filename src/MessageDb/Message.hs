@@ -30,10 +30,6 @@ import Data.Time (UTCTime)
 import Data.Typeable (Typeable, typeRep)
 import Data.UUID (UUID)
 import qualified Data.UUID.V4 as UUID.V4
-import Database.PostgreSQL.Simple.FromField (FromField)
-import qualified Database.PostgreSQL.Simple.FromField as FromField
-import Database.PostgreSQL.Simple.ToField (ToField)
-import qualified Database.PostgreSQL.Simple.ToField as ToField
 import MessageDb.StreamName (StreamName (..))
 
 
@@ -57,13 +53,6 @@ instance Aeson.FromJSON MessageId where
   parseJSON = fmap MessageId . Aeson.parseJSON
 
 
-instance ToField MessageId where
-  toField = ToField.toField . fromMessageId
-
-
-instance FromField MessageId where
-  fromField = fmap (fmap MessageId) . FromField.fromField
-
 
 newtype MessageType = MessageType
   { fromMessageType :: Text
@@ -86,13 +75,6 @@ instance Aeson.FromJSON MessageType where
   parseJSON = fmap MessageType . Aeson.parseJSON
 
 
-instance ToField MessageType where
-  toField = ToField.toField . fromMessageType
-
-
-instance FromField MessageType where
-  fromField = fmap (fmap MessageType) . FromField.fromField
-
 
 newtype StreamPosition = StreamPosition
   { fromStreamPosition :: Integer
@@ -108,13 +90,6 @@ instance Aeson.ToJSON StreamPosition where
 instance Aeson.FromJSON StreamPosition where
   parseJSON = fmap StreamPosition . Aeson.parseJSON
 
-
-instance ToField StreamPosition where
-  toField = ToField.toField . fromStreamPosition
-
-
-instance FromField StreamPosition where
-  fromField = fmap (fmap StreamPosition) . FromField.fromField
 
 
 -- | Primary key. The ordinal position of the message in the entire message store. Global position may have gaps.
@@ -132,13 +107,6 @@ instance Aeson.ToJSON GlobalPosition where
 instance Aeson.FromJSON GlobalPosition where
   parseJSON = fmap GlobalPosition . Aeson.parseJSON
 
-
-instance ToField GlobalPosition where
-  toField = ToField.toField . fromGlobalPosition
-
-
-instance FromField GlobalPosition where
-  fromField = fmap (fmap GlobalPosition) . FromField.fromField
 
 
 -- | Message payload
@@ -162,14 +130,6 @@ instance Aeson.FromJSON Payload where
   parseJSON = fmap Payload . Aeson.parseJSON
 
 
-instance ToField Payload where
-  toField = ToField.toField . fromPayload
-
-
-instance FromField Payload where
-  fromField = fmap (fmap Payload) . FromField.fromField
-
-
 -- | Message metadata
 newtype Metadata = Metadata
   { fromMetadata :: Aeson.Value
@@ -191,14 +151,6 @@ instance Aeson.FromJSON Metadata where
   parseJSON = fmap Metadata . Aeson.parseJSON
 
 
-instance ToField Metadata where
-  toField = ToField.toField . fromMetadata
-
-
-instance FromField Metadata where
-  fromField = fmap (fmap Metadata) . FromField.fromField
-
-
 -- | Timestamp when the message was written.
 newtype CreatedAtTimestamp = CreatedAtTimestamp
   { fromCreatedAtTimestamp :: UTCTime
@@ -213,14 +165,6 @@ instance Aeson.ToJSON CreatedAtTimestamp where
 
 instance Aeson.FromJSON CreatedAtTimestamp where
   parseJSON = fmap CreatedAtTimestamp . Aeson.parseJSON
-
-
-instance ToField CreatedAtTimestamp where
-  toField = ToField.toField . fromCreatedAtTimestamp
-
-
-instance FromField CreatedAtTimestamp where
-  fromField = fmap (fmap CreatedAtTimestamp) . FromField.fromField
 
 
 data Message = Message

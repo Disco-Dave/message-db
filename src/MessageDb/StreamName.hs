@@ -16,10 +16,6 @@ import Data.Coerce (coerce)
 import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Database.PostgreSQL.Simple.FromField (FromField)
-import qualified Database.PostgreSQL.Simple.FromField as FromField
-import Database.PostgreSQL.Simple.ToField (ToField)
-import qualified Database.PostgreSQL.Simple.ToField as ToField
 import Prelude hiding (all)
 
 
@@ -36,14 +32,6 @@ instance Aeson.ToJSON StreamName where
 
 instance Aeson.FromJSON StreamName where
   parseJSON = fmap StreamName . Aeson.parseJSON
-
-
-instance ToField StreamName where
-  toField = ToField.toField . fromStreamName
-
-
-instance FromField StreamName where
-  fromField = fmap (fmap StreamName) . FromField.fromField
 
 
 separator :: Char
@@ -80,14 +68,6 @@ instance Aeson.FromJSON CategoryName where
   parseJSON = fmap CategoryName . Aeson.parseJSON
 
 
-instance ToField CategoryName where
-  toField = ToField.toField . fromCategoryName
-
-
-instance FromField CategoryName where
-  fromField = fmap (fmap CategoryName) . FromField.fromField
-
-
 newtype IdentityName = IdentityName {fromIdentityName :: Text}
   deriving (Show, Eq, Ord)
 
@@ -122,11 +102,3 @@ instance Aeson.ToJSON IdentityName where
 
 instance Aeson.FromJSON IdentityName where
   parseJSON = fmap IdentityName . Aeson.parseJSON
-
-
-instance ToField IdentityName where
-  toField = ToField.toField . fromIdentityName
-
-
-instance FromField IdentityName where
-  fromField = fmap (fmap IdentityName) . FromField.fromField
