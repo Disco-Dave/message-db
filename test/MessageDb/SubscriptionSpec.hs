@@ -1,8 +1,6 @@
 module MessageDb.SubscriptionSpec (spec) where
 
 import qualified Data.Pool as Pool
-import qualified Data.UUID as UUID
-import qualified Data.UUID.V4 as UUID.V4
 import qualified Examples.BankAccount as BankAccount
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message

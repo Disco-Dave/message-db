@@ -63,8 +63,8 @@ genMessage = do
   messageType <- genMessageType
   streamPosition <- genStreamPosition
   globalPosition <- genGlobalPosition
-  payload <- Gen.maybe genPayload
-  metadata <- Gen.maybe genMetadata
+  payload <- genPayload
+  metadata <- genMetadata
   createdAtTimestamp <- genCreatedAtTimestamp
 
   pure Message{..}

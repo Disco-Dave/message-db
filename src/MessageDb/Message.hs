@@ -9,18 +9,19 @@ module MessageDb.Message
     Metadata (..),
     Message (..),
     parsePayload,
+    nullPayload,
     typeOf,
     typedPayload,
     parseMetadata,
     typedMetadata,
+    nullMetadata,
   )
 where
 
-import Data.Aeson ((.:), (.:?), (.=))
+import Data.Aeson ((.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
 import Data.Coerce (coerce)
-import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.String (IsString)
 import Data.Text (Text)
@@ -147,6 +148,11 @@ newtype Payload = Payload
   deriving (Show, Eq)
 
 
+nullPayload :: Payload
+nullPayload =
+  Payload Aeson.Null
+
+
 instance Aeson.ToJSON Payload where
   toJSON = Aeson.toJSON . fromPayload
   toEncoding = Aeson.toEncoding . fromPayload
@@ -169,6 +175,11 @@ newtype Metadata = Metadata
   { fromMetadata :: Aeson.Value
   }
   deriving (Show, Eq)
+
+
+nullMetadata :: Metadata
+nullMetadata =
+  Metadata Aeson.Null
 
 
 instance Aeson.ToJSON Metadata where
@@ -218,20 +229,20 @@ data Message = Message
   , messageType :: MessageType
   , streamPosition :: StreamPosition
   , globalPosition :: GlobalPosition
-  , payload :: Maybe Payload
-  , metadata :: Maybe Metadata
+  , payload :: Payload
+  , metadata :: Metadata
   , createdAtTimestamp :: CreatedAtTimestamp
   }
   deriving (Show, Eq)
 
 
-parseJson :: Aeson.FromJSON value => Maybe Aeson.Value -> Either String value
+parseJson :: Aeson.FromJSON value => Aeson.Value -> Either String value
 parseJson column =
-  let json = fromMaybe Aeson.Null (coerce column)
+  let json = coerce column
    in AesonTypes.parseEither Aeson.parseJSON json
 
 
-parsePayload :: Aeson.FromJSON value => Maybe Payload -> Either String value
+parsePayload :: Aeson.FromJSON value => Payload -> Either String value
 parsePayload =
   parseJson . coerce
 
@@ -241,7 +252,7 @@ typedPayload Message{payload} =
   parsePayload payload
 
 
-parseMetadata :: Aeson.FromJSON value => Maybe Metadata -> Either String value
+parseMetadata :: Aeson.FromJSON value => Metadata -> Either String value
 parseMetadata =
   parseJson . coerce
 
@@ -276,7 +287,7 @@ instance Aeson.FromJSON Message where
     messageType <- object .: "type"
     streamPosition <- object .: "streamPosition"
     globalPosition <- object .: "globalPosition"
-    payload <- object .:? "payload"
-    metadata <- object .:? "metadata"
+    payload <- object .:? "payload" .!= nullPayload
+    metadata <- object .:? "metadata" .!= nullMetadata
     createdAtTimestamp <- object .: "createdAtTimestamp"
     pure Message{..}

@@ -285,21 +285,21 @@ initialAccount =
     }
 
 
-addCommandPosition :: Maybe Message.Metadata -> Set Message.GlobalPosition -> Set Message.GlobalPosition
+addCommandPosition :: Message.Metadata -> Set Message.GlobalPosition -> Set Message.GlobalPosition
 addCommandPosition metadata positions =
   case Message.parseMetadata metadata of
     Left _ -> positions
     Right AccountMetadata{createdFrom} -> Set.insert createdFrom positions
 
 
-markAsProcessed :: TypedMessage (Maybe Message.Payload) (Maybe Message.Metadata) -> BankAccount -> BankAccount
+markAsProcessed :: TypedMessage Message.Payload Message.Metadata -> BankAccount -> BankAccount
 markAsProcessed TypedMessage{metadata} bankAccount =
   bankAccount
     { commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
-opened :: TypedMessage Opened (Maybe Message.Metadata) -> BankAccount -> BankAccount
+opened :: TypedMessage Opened Message.Metadata -> BankAccount -> BankAccount
 opened TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { isOpened = True
@@ -308,7 +308,7 @@ opened TypedMessage{payload, metadata} bankAccount =
     }
 
 
-closed :: TypedMessage Closed (Maybe Message.Metadata) -> BankAccount -> BankAccount
+closed :: TypedMessage Closed Message.Metadata -> BankAccount -> BankAccount
 closed TypedMessage{metadata} bankAccount =
   bankAccount
     { isOpened = False
@@ -316,7 +316,7 @@ closed TypedMessage{metadata} bankAccount =
     }
 
 
-deposited :: TypedMessage Deposited (Maybe Message.Metadata) -> BankAccount -> BankAccount
+deposited :: TypedMessage Deposited Message.Metadata -> BankAccount -> BankAccount
 deposited TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { balance = balance bankAccount + depositedAmount payload
@@ -324,7 +324,7 @@ deposited TypedMessage{payload, metadata} bankAccount =
     }
 
 
-withdrawn :: TypedMessage Withdrawn (Maybe Message.Metadata) -> BankAccount -> BankAccount
+withdrawn :: TypedMessage Withdrawn Message.Metadata -> BankAccount -> BankAccount
 withdrawn TypedMessage{payload, metadata} bankAccount =
   bankAccount
     { balance = balance bankAccount - withdrawnAmount payload
@@ -332,7 +332,7 @@ withdrawn TypedMessage{payload, metadata} bankAccount =
     }
 
 
-withdrawRejected :: TypedMessage WithdrawRejected (Maybe Message.Metadata) -> BankAccount -> BankAccount
+withdrawRejected :: TypedMessage WithdrawRejected Message.Metadata -> BankAccount -> BankAccount
 withdrawRejected TypedMessage{payload, createdAtTimestamp, metadata} bankAccount =
   let overdraft =
         Overdraft

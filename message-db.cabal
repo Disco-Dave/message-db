@@ -15,7 +15,6 @@ library
       MessageDb.Functions
       MessageDb.Handlers
       MessageDb.Message
-      MessageDb.ObjectMetadata
       MessageDb.Projection
       MessageDb.Projection.Handlers
       MessageDb.StreamName

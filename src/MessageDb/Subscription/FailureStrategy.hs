@@ -80,7 +80,7 @@ writeToCategory shouldKeep withConnection categoryName =
               streamName
               FailedMessage.messageType
               payload
-              metadata
+              (Just metadata)
               Nothing
    in FailureStrategy logFailureToCategory
 

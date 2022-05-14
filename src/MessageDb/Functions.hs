@@ -23,7 +23,7 @@ where
 import Control.Exception (Exception, handle, throwIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as Char8
-import Data.Maybe (listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.UUID as UUID
@@ -131,8 +131,8 @@ messageParser = do
   messageType <- field
   streamPosition <- field
   globalPosition <- field
-  payload <- field
-  metadata <- field
+  payload <- fromMaybe (Message.Payload Aeson.Null) <$> field
+  metadata <- fromMaybe (Message.Metadata Aeson.Null) <$> field
   createdAtTimestamp <- field
   pure Message{..}
 

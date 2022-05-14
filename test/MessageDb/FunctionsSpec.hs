@@ -5,6 +5,7 @@ where
 
 import Control.Monad (replicateM_)
 import Data.Foldable (for_)
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Time as Time
@@ -56,8 +57,8 @@ spec =
         Message.messageId message `shouldBe` messageId
         Message.streamName message `shouldBe` streamName
         Message.messageType message `shouldBe` messageType
-        Message.payload message `shouldBe` Just payload
-        Message.metadata message `shouldBe` Just metadata
+        Message.payload message `shouldBe` payload
+        Message.metadata message `shouldBe` metadata
         Message.createdAtTimestamp message `shouldSatisfy` isCorrectTimestamp now 0.1
         position `shouldBe` 0
 
@@ -109,8 +110,8 @@ spec =
         Message.messageId message `shouldBe` messageId
         Message.streamName message `shouldBe` streamName
         Message.messageType message `shouldBe` messageType
-        Message.payload message `shouldBe` Just payload
-        Message.metadata message `shouldBe` Just metadata
+        Message.payload message `shouldBe` payload
+        Message.metadata message `shouldBe` metadata
 
       it "can write a message without metadata" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -132,8 +133,8 @@ spec =
         Message.messageId message `shouldBe` messageId
         Message.streamName message `shouldBe` streamName
         Message.messageType message `shouldBe` messageType
-        Message.payload message `shouldBe` Just payload
-        Message.metadata message `shouldBe` Nothing
+        Message.payload message `shouldBe` payload
+        Message.metadata message `shouldBe` Message.nullMetadata
 
       it "throws exception when expected version check fails" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -233,8 +234,8 @@ spec =
           Message.streamPosition message `shouldBe` Message.StreamPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns messages after specified stream position" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -265,8 +266,8 @@ spec =
           Message.streamPosition message `shouldBe` Message.StreamPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns less than or equal to batch size when specified" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -324,29 +325,29 @@ spec =
           Message.streamPosition message `shouldBe` Message.StreamPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [5 .. 9] secondBatch) $ \(index, message) -> do
           Message.streamPosition message `shouldBe` Message.StreamPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [10 .. 14] thirdBatch) $ \(index, message) -> do
           Message.streamPosition message `shouldBe` Message.StreamPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [15 .. 17] fourthBatch) $ \(index, message) -> do
           Message.streamPosition message `shouldBe` Message.StreamPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns everything when a batch size of unlimited is specified" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -477,8 +478,8 @@ spec =
           Message.streamPosition message `shouldBe` Message.StreamPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns messages after specified position" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
@@ -513,8 +514,8 @@ spec =
           Message.globalPosition message `shouldBe` Message.GlobalPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns up to 1000 messages when batch size is not specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
@@ -609,29 +610,29 @@ spec =
           Message.globalPosition message `shouldBe` Message.GlobalPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [6 .. 10] secondBatch) $ \(index, message) -> do
           Message.globalPosition message `shouldBe` Message.GlobalPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [11 .. 15] thirdBatch) $ \(index, message) -> do
           Message.globalPosition message `shouldBe` Message.GlobalPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [16 .. 18] fourthBatch) $ \(index, message) -> do
           Message.globalPosition message `shouldBe` Message.GlobalPosition index
           Message.streamName message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` Just payload
-          Message.metadata message `shouldBe` metadata
+          Message.payload message `shouldBe` payload
+          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns everything when a batch size of unlimited is specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
