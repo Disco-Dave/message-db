@@ -122,6 +122,6 @@ start withConnection Subscription{..} = do
 
         poll nextPosition (fromMaybe lastPositionSaved positionSaved)
 
-  startingPosition <- PositionStrategy.restore positionStrategy
+  lastPositionSaved <- PositionStrategy.restore positionStrategy
 
-  poll startingPosition startingPosition
+  poll (lastPositionSaved + 1) lastPositionSaved

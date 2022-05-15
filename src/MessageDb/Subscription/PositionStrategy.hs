@@ -10,12 +10,12 @@ module MessageDb.Subscription.PositionStrategy
 where
 
 import Control.Monad (void)
+import Data.Coerce (coerce)
 import qualified Database.PostgreSQL.Simple as Postgres
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
 import MessageDb.StreamName (StreamName)
 import MessageDb.Units (NumberOfMessages (..))
-import Data.Coerce (coerce)
 import Numeric.Natural (Natural)
 
 
