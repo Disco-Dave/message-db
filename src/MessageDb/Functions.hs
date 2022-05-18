@@ -52,13 +52,15 @@ data ConsumerGroup = ConsumerGroup
 newtype Condition = Condition
   { fromCondition :: Text
   }
-  deriving (Show, Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
+  deriving (Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
+  deriving (Show) via Text
 
 
 newtype Correlation = Correlation
   { fromCorrelation :: Text
   }
-  deriving (Show, Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
+  deriving (Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
+  deriving (Show) via Text
 
 
 data ExpectedVersion

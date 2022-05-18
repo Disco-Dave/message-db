@@ -77,7 +77,8 @@ import UnliftIO (MonadUnliftIO (withRunInIO), throwIO)
 newtype Money = Money
   { fromMoney :: Double
   }
-  deriving (Show, Eq, Ord, Num, Generic)
+  deriving (Eq, Ord, Num, Generic)
+  deriving (Show) via Double
 instance Aeson.ToJSON Money
 instance Aeson.FromJSON Money
 
@@ -85,7 +86,8 @@ instance Aeson.FromJSON Money
 newtype AccountMetadata = AccountMetadata
   { createdFrom :: Message.GlobalPosition
   }
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic)
+  deriving (Show) via Message.GlobalPosition
 instance Aeson.ToJSON AccountMetadata
 instance Aeson.FromJSON AccountMetadata
 
@@ -93,7 +95,8 @@ instance Aeson.FromJSON AccountMetadata
 newtype AccountId = AccountId
   { fromAccountId :: Text
   }
-  deriving (Show, Eq, Ord)
+  deriving (Eq, Ord)
+  deriving (Show) via Text
 
 
 newAccountId :: IO AccountId
@@ -439,7 +442,7 @@ handleCommand ::
   , Aeson.ToJSON success
   ) =>
   (command -> BankAccount -> Either failure success) ->
-  TypedMessage command (Maybe Message.Metadata) ->
+  TypedMessage command Message.Metadata ->
   TestApp ()
 handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
   Just accountId <- pure . coerce $ StreamName.identity streamName

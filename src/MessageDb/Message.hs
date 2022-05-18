@@ -36,7 +36,8 @@ import MessageDb.StreamName (StreamName (..))
 newtype MessageId = MessageId
   { fromMessageId :: UUID
   }
-  deriving (Show, Eq, Ord)
+  deriving (Eq, Ord)
+  deriving (Show) via UUID
 
 
 newMessageId :: IO MessageId
@@ -53,11 +54,11 @@ instance Aeson.FromJSON MessageId where
   parseJSON = fmap MessageId . Aeson.parseJSON
 
 
-
 newtype MessageType = MessageType
   { fromMessageType :: Text
   }
-  deriving (Show, Eq, Ord, IsString)
+  deriving (Eq, Ord, IsString)
+  deriving (Show) via Text
 
 
 typeOf :: forall payload. Typeable payload => MessageType
@@ -75,11 +76,11 @@ instance Aeson.FromJSON MessageType where
   parseJSON = fmap MessageType . Aeson.parseJSON
 
 
-
 newtype StreamPosition = StreamPosition
   { fromStreamPosition :: Integer
   }
-  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
+  deriving (Eq, Ord, Num, Real, Enum, Integral)
+  deriving (Show) via Integer
 
 
 instance Aeson.ToJSON StreamPosition where
@@ -91,12 +92,12 @@ instance Aeson.FromJSON StreamPosition where
   parseJSON = fmap StreamPosition . Aeson.parseJSON
 
 
-
 -- | Primary key. The ordinal position of the message in the entire message store. Global position may have gaps.
 newtype GlobalPosition = GlobalPosition
   { fromGlobalPosition :: Integer
   }
-  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
+  deriving (Eq, Ord, Num, Real, Enum, Integral)
+  deriving (Show) via Integer
 
 
 instance Aeson.ToJSON GlobalPosition where
@@ -108,12 +109,12 @@ instance Aeson.FromJSON GlobalPosition where
   parseJSON = fmap GlobalPosition . Aeson.parseJSON
 
 
-
 -- | Message payload
 newtype Payload = Payload
   { fromPayload :: Aeson.Value
   }
-  deriving (Show, Eq)
+  deriving (Eq)
+  deriving (Show) via Aeson.Value
 
 
 nullPayload :: Payload
@@ -134,7 +135,8 @@ instance Aeson.FromJSON Payload where
 newtype Metadata = Metadata
   { fromMetadata :: Aeson.Value
   }
-  deriving (Show, Eq)
+  deriving (Eq)
+  deriving (Show) via Aeson.Value
 
 
 nullMetadata :: Metadata
@@ -155,7 +157,8 @@ instance Aeson.FromJSON Metadata where
 newtype CreatedAtTimestamp = CreatedAtTimestamp
   { fromCreatedAtTimestamp :: UTCTime
   }
-  deriving (Show, Eq, Ord)
+  deriving (Eq, Ord)
+  deriving (Show) via UTCTime
 
 
 instance Aeson.ToJSON CreatedAtTimestamp where

@@ -4,7 +4,7 @@ module MessageDb.Subscription.PositionStrategy
     PositionSaved,
     PositionStrategy (..),
     dontSave,
-    PositionUpdateInterval,
+    PositionUpdateInterval (..),
     writeToStream,
   )
 where
@@ -41,7 +41,8 @@ dontSave =
 newtype PositionUpdateInterval = PositioUpdateInterval
   { fromPositionUpdateInterval :: NumberOfMessages
   }
-  deriving (Show, Eq, Ord, Num, Real, Enum, Integral)
+  deriving (Eq, Ord, Num, Real, Enum, Integral)
+  deriving (Show) via NumberOfMessages
 
 
 writeToStream :: Functions.WithConnection -> PositionUpdateInterval -> StreamName -> PositionStrategy

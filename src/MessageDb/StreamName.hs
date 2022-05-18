@@ -22,7 +22,8 @@ import Prelude hiding (all)
 newtype StreamName = StreamName
   { fromStreamName :: Text
   }
-  deriving (Show, Eq, Ord, IsString, Semigroup)
+  deriving (Eq, Ord, IsString, Semigroup)
+  deriving (Show) via Text
 
 
 instance Aeson.ToJSON StreamName where
@@ -39,7 +40,8 @@ separator = '-'
 
 
 newtype CategoryName = CategoryName Text
-  deriving (Show, Eq, Ord)
+  deriving (Eq, Ord)
+  deriving (Show) via Text
 
 
 fromCategoryName :: CategoryName -> Text
@@ -69,7 +71,8 @@ instance Aeson.FromJSON CategoryName where
 
 
 newtype IdentityName = IdentityName {fromIdentityName :: Text}
-  deriving (Show, Eq, Ord)
+  deriving (Eq, Ord)
+  deriving (Show) via Text
 
 
 identity :: StreamName -> Maybe IdentityName

@@ -17,6 +17,7 @@ ghc-options:
 default-extensions:
   - AllowAmbiguousTypes
   - DeriveGeneric
+  - DerivingVia
   - GeneralizedNewtypeDeriving
   - LambdaCase
   - NamedFieldPuns

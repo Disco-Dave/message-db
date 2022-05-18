@@ -32,6 +32,7 @@ library
   default-extensions:
       AllowAmbiguousTypes
       DeriveGeneric
+      DerivingVia
       GeneralizedNewtypeDeriving
       LambdaCase
       NamedFieldPuns
@@ -43,7 +44,7 @@ library
       StrictData
       TupleSections
       TypeApplications
-  ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-deriving-strategies -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-monomorphism-restriction -Wno-prepositive-qualified-module -Wno-safe -Wno-unsafe
+  ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-deriving-strategies -Wno-missing-import-lists -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-monomorphism-restriction -Wno-prepositive-qualified-module -Wno-safe -Wno-unsafe
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -79,6 +80,7 @@ test-suite message-db-test
   default-extensions:
       AllowAmbiguousTypes
       DeriveGeneric
+      DerivingVia
       GeneralizedNewtypeDeriving
       LambdaCase
       NamedFieldPuns
@@ -90,7 +92,7 @@ test-suite message-db-test
       StrictData
       TupleSections
       TypeApplications
-  ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-deriving-strategies -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-monomorphism-restriction -Wno-prepositive-qualified-module -Wno-safe -Wno-unsafe -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Weverything -Wno-all-missed-specialisations -Wno-implicit-prelude -Wno-missed-specialisations -Wno-missing-deriving-strategies -Wno-missing-import-lists -Wno-missing-local-signatures -Wno-missing-safe-haskell-mode -Wno-monomorphism-restriction -Wno-prepositive-qualified-module -Wno-safe -Wno-unsafe -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , base >=4.7 && <5
