@@ -68,6 +68,7 @@ test-suite message-db-test
       Generators.StreamName
       MessageDb.FunctionsSpec
       MessageDb.StreamNameSpec
+      MessageDb.Subscription.FailureStrategySpec
       MessageDb.Subscription.PositionStrategySpec
       MessageDb.SubscriptionSpec
       Properties

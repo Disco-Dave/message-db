@@ -54,8 +54,11 @@ spec =
 
         let connectionPool = TestApp.connectionPool testAppData
 
+            numberOfMessages :: Num a => a
+            numberOfMessages = 21
+
         Pool.withResource connectionPool $ \connection ->
-          replicateM_ 21 $
+          replicateM_ numberOfMessages $
             Functions.writeMessage
               connection
               (BankAccount.commandStream accountId)
@@ -65,7 +68,7 @@ spec =
               Nothing
 
         TestApp.runWith testAppData $
-          TestApp.blockUntilStreamHas (BankAccount.entityStream accountId) 21
+          TestApp.blockUntilStreamHas (BankAccount.entityStream accountId) numberOfMessages
 
         messages <-
           Pool.withResource connectionPool $ \connection ->
@@ -79,7 +82,7 @@ spec =
         abs (length messages - 4) `shouldSatisfy` (<= 1)
 
     around TestApp.withTestAppData $
-      fit "restores position" $ \testAppData -> do
+      it "restores position" $ \testAppData -> do
         accountId <- BankAccount.newAccountId
 
         let connectionPool = TestApp.connectionPool testAppData
