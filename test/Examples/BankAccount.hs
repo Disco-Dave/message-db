@@ -5,6 +5,7 @@
 module Examples.BankAccount
   ( Money (..),
     AccountId (..),
+    AccountMetadata (..),
     Open (..),
     Opened (..),
     OpenRejectedReason (..),
@@ -34,6 +35,8 @@ module Examples.BankAccount
     deposit,
     withdraw,
     subscribe,
+    send,
+    markAsProcessed,
   )
 where
 
@@ -295,7 +298,7 @@ addCommandPosition metadata positions =
     Right AccountMetadata{createdFrom} -> Set.insert createdFrom positions
 
 
-markAsProcessed :: TypedMessage Message.Payload Message.Metadata -> BankAccount -> BankAccount
+markAsProcessed :: TypedMessage payload Message.Metadata -> BankAccount -> BankAccount
 markAsProcessed TypedMessage{metadata} bankAccount =
   bankAccount
     { commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
@@ -356,11 +359,11 @@ projection =
   let handlers =
         ProjectionHandlers.empty
           & ProjectionHandlers.attach (Message.typeOf @Opened) opened
-          & ProjectionHandlers.attach (Message.typeOf @OpenRejected) markAsProcessed
+          & ProjectionHandlers.attach @Message.Payload (Message.typeOf @OpenRejected) markAsProcessed
           & ProjectionHandlers.attach (Message.typeOf @Closed) closed
-          & ProjectionHandlers.attach (Message.typeOf @CloseRejected) markAsProcessed
+          & ProjectionHandlers.attach @Message.Payload (Message.typeOf @CloseRejected) markAsProcessed
           & ProjectionHandlers.attach (Message.typeOf @Deposited) deposited
-          & ProjectionHandlers.attach (Message.typeOf @DepositRejected) markAsProcessed
+          & ProjectionHandlers.attach @Message.Payload (Message.typeOf @DepositRejected) markAsProcessed
           & ProjectionHandlers.attach (Message.typeOf @Withdrawn) withdrawn
           & ProjectionHandlers.attach (Message.typeOf @WithdrawRejected) withdrawRejected
    in Projection
@@ -499,3 +502,17 @@ subscribe =
                   & attach (Message.typeOf @Deposit) deposit
                   & attach (Message.typeOf @Withdraw) withdraw
         }
+
+
+send :: forall command. (Aeson.ToJSON command, Typeable command) => AccountId -> command -> TestApp ()
+send accountId command = do
+  TestAppData{connectionPool} <- ask
+
+  liftIO . void . Pool.withResource connectionPool $ \connection ->
+    Functions.writeMessage
+      connection
+      (commandStream accountId)
+      (Message.typeOf @command)
+      command
+      (Just Message.nullMetadata)
+      Nothing

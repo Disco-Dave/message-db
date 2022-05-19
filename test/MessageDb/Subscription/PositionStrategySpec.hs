@@ -2,13 +2,12 @@ module MessageDb.Subscription.PositionStrategySpec (spec) where
 
 import Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.MVar as MVar
-import Control.Monad (replicateM_, void)
+import Control.Monad (replicateM_)
 import Control.Monad.Reader (ask)
 import Data.Coerce (coerce)
 import qualified Data.Pool as Pool
 import qualified Examples.BankAccount as BankAccount
 import qualified MessageDb.Functions as Functions
-import qualified MessageDb.Message as Message
 import qualified MessageDb.Projection as Projection
 import MessageDb.StreamName (StreamName)
 import MessageDb.Subscription (Subscription)
@@ -57,15 +56,8 @@ spec =
             numberOfMessages :: Num a => a
             numberOfMessages = 21
 
-        Pool.withResource connectionPool $ \connection ->
-          replicateM_ numberOfMessages $
-            Functions.writeMessage
-              connection
-              (BankAccount.commandStream accountId)
-              (Message.typeOf @BankAccount.Open)
-              (BankAccount.Open 40)
-              (Nothing :: Maybe ())
-              Nothing
+        TestApp.runWith testAppData . replicateM_ numberOfMessages $
+          BankAccount.send accountId (BankAccount.Open 40)
 
         TestApp.runWith testAppData $
           TestApp.blockUntilStreamHas (BankAccount.entityStream accountId) numberOfMessages
@@ -88,15 +80,8 @@ spec =
         let connectionPool = TestApp.connectionPool testAppData
             numberOfMessages = 20
 
-        Pool.withResource connectionPool $ \connection ->
-          replicateM_ numberOfMessages $
-            Functions.writeMessage
-              connection
-              (BankAccount.commandStream accountId)
-              (Message.typeOf @BankAccount.Open)
-              (BankAccount.Open 40)
-              (Nothing :: Maybe ())
-              Nothing
+        TestApp.runWith testAppData . replicateM_ numberOfMessages $
+          BankAccount.send accountId (BankAccount.Open 40)
 
         subscription <-
           TestApp.runWith testAppData $
@@ -121,14 +106,8 @@ spec =
                   else check
            in check
 
-        void . Pool.withResource connectionPool $ \connection ->
-          Functions.writeMessage
-            connection
-            (BankAccount.commandStream accountId)
-            (Message.typeOf @BankAccount.Open)
-            (BankAccount.Open 40)
-            (Nothing :: Maybe ())
-            Nothing
+        TestApp.runWith testAppData $
+          BankAccount.send accountId (BankAccount.Open 40)
 
         Just projectedAccount <-
           Projection.fetch

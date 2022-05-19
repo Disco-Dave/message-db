@@ -3,7 +3,7 @@ module MessageDb.SubscriptionSpec (spec) where
 import qualified Data.Pool as Pool
 import qualified Examples.BankAccount as BankAccount
 import qualified MessageDb.Functions as Functions
-import qualified MessageDb.Message as Message
+import qualified MessageDb.Projection as Projection
 import Test.Hspec
 import qualified TestApp
 
@@ -11,41 +11,28 @@ import qualified TestApp
 spec :: Spec
 spec =
   describe "Bank Account Example" . around (TestApp.withSubscriptions [BankAccount.subscribe]) $
-    it "can open an account" $ \testAppData -> do
+    it "handles commands and can be projected" $ \testAppData -> do
       accountId <- BankAccount.newAccountId
 
       let connectionPool = TestApp.connectionPool testAppData
-
-          commandStream = BankAccount.commandStream accountId
           entityStream = BankAccount.entityStream accountId
 
-      _ <- Pool.withResource connectionPool $ \connection ->
-        Functions.writeMessage
-          connection
-          commandStream
-          (Message.typeOf @BankAccount.Open)
-          (BankAccount.Open 200)
-          (Nothing :: Maybe ())
-          Nothing
+      TestApp.runWith testAppData $ do
+        BankAccount.send accountId (BankAccount.Open 200)
+        BankAccount.send accountId (BankAccount.Open 202)
+        BankAccount.send accountId (BankAccount.Deposit 20)
+        BankAccount.send accountId (BankAccount.Deposit 14)
+        BankAccount.send accountId (BankAccount.Withdraw 100)
+        TestApp.blockUntilStreamHas entityStream 5
 
-      _ <- Pool.withResource connectionPool $ \connection ->
-        Functions.writeMessage
-          connection
-          commandStream
-          (Message.typeOf @BankAccount.Open)
-          (BankAccount.Open 202)
-          (Nothing :: Maybe ())
-          Nothing
+      Just projectedAccount <-
+        Projection.fetch
+          (Pool.withResource connectionPool)
+          (Functions.FixedSize 100)
+          (BankAccount.entityStream accountId)
+          BankAccount.projection
 
-      TestApp.runWith testAppData $
-        TestApp.blockUntilStreamHas entityStream 2
+      let bankAccount = Projection.state projectedAccount
+          commandsProcessed = BankAccount.commandsProcessed bankAccount
 
-      messages <- Pool.withResource connectionPool $ \connection ->
-        Functions.getStreamMessages
-          connection
-          entityStream
-          Nothing
-          Nothing
-          Nothing
-
-      length messages `shouldBe` 2
+      length commandsProcessed `shouldBe` 5

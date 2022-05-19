@@ -43,7 +43,6 @@ library:
     - safe-exceptions
     - text
     - time
-    - unordered-containers
     - uuid
 
 tests:
