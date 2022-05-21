@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Generators
   ( genUUID,
     genUTCTime,
@@ -7,7 +9,6 @@ where
 
 import qualified Data.Aeson as Aeson
 import Data.Bifunctor (second)
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as Text
 import qualified Data.Time as Time
 import Data.UUID (UUID)
@@ -17,6 +18,13 @@ import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural (Natural)
+
+#if MIN_VERSION_aeson(2, 0, 0)
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Aeson.Key as Key
+#else
+import qualified Data.HashMap.Strict as HashMap
+#endif
 
 
 genUUID :: Gen UUID
@@ -50,7 +58,7 @@ genUTCTime = do
 
 
 genAesonValue :: Gen Aeson.Value
-genAesonValue =
+genAesonValue = 
   let genNull =
         pure Aeson.Null
 
@@ -77,6 +85,21 @@ genAesonValue =
             elements = fmap (second genList) (choices (factor - 1))
          in Aeson.Array . Vector.fromList <$> Gen.frequency elements
 
+#if MIN_VERSION_aeson(2, 0, 0)
+      genObject factor =
+        let genPropertyName =
+              Key.fromText <$> Gen.text (Range.linear 1 10) Gen.alpha
+
+            genPropertyValue =
+              Gen.frequency (choices (factor - 1))
+
+            property =
+              (,) <$> genPropertyName <*> genPropertyValue
+
+            pairs =
+              Gen.list (Range.linear 0 10) property
+         in fmap (Aeson.Object . KeyMap.fromList) pairs
+#else
       genObject factor =
         let genPropertyName =
               Gen.text (Range.linear 1 10) Gen.alpha
@@ -90,7 +113,7 @@ genAesonValue =
             pairs =
               Gen.list (Range.linear 0 10) property
          in fmap (Aeson.Object . HashMap.fromList) pairs
-
+#endif
    in 
     let startingDepth = 3 :: Natural
      in Gen.frequency 
