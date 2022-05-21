@@ -165,7 +165,7 @@ spec =
             messageType
             payload
             metadata
-            (Just $ Functions.StreamVersion 9)
+            (Just . Functions.ExpectedVersion $ Functions.DoesExist 9)
 
         results <- do
           messageType <- Gen.sample genMessageType
@@ -180,7 +180,7 @@ spec =
               messageType
               payload
               metadata
-              (Just $ Functions.StreamVersion 4)
+              (Just . Functions.ExpectedVersion $ Functions.DoesExist 4)
 
         let actualErrorMessage =
               case results of

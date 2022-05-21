@@ -31,6 +31,7 @@ import Data.Typeable (Typeable, typeRep)
 import Data.UUID (UUID)
 import qualified Data.UUID.V4 as UUID.V4
 import MessageDb.StreamName (StreamName (..))
+import Numeric.Natural (Natural)
 
 
 newtype MessageId = MessageId
@@ -77,10 +78,10 @@ instance Aeson.FromJSON MessageType where
 
 
 newtype StreamPosition = StreamPosition
-  { fromStreamPosition :: Integer
+  { fromStreamPosition :: Natural
   }
   deriving (Eq, Ord, Num, Real, Enum, Integral)
-  deriving (Show) via Integer
+  deriving (Show) via Natural
 
 
 instance Aeson.ToJSON StreamPosition where
@@ -206,7 +207,7 @@ parseMetadata =
 
 typedMetadata :: Aeson.FromJSON metadata => Message -> Either String metadata
 typedMetadata Message{metadata} =
-  parseJson $ coerce metadata
+  parseMetadata metadata
 
 
 toKeyValues :: Aeson.KeyValue keyValue => Message -> [keyValue]

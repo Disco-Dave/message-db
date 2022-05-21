@@ -3,14 +3,16 @@ module MessageDb.Projection
     Functions.BatchSize (..),
     UnprocessedMessage (..),
     Projected (..),
+    versionIncludingUnprocessed,
     project,
     fetch,
   )
 where
 
 import Control.Exception (Exception)
-import Data.Foldable (toList)
+import Data.Foldable (foldl', toList)
 import Data.List.NonEmpty (NonEmpty ((:|)))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified MessageDb.Functions as Functions
 import MessageDb.Handlers (HandleError (..))
 import MessageDb.Message (Message)
@@ -37,7 +39,7 @@ instance Exception UnprocessedMessage
 data Projected state = Projected
   { unprocessed :: [UnprocessedMessage]
   , state :: state
-  , version :: Message.StreamPosition
+  , version :: Functions.StreamVersion
   }
   deriving (Show, Eq)
 
@@ -47,8 +49,18 @@ empty initialState =
   Projected
     { unprocessed = []
     , state = initialState
-    , version = 0
+    , version = Functions.DoesNotExist
     }
+
+
+versionIncludingUnprocessed :: Projected state -> Functions.StreamVersion
+versionIncludingUnprocessed Projected{..} =
+  let unprocessedPositions =
+        Functions.DoesExist . Message.streamPosition . message <$> unprocessed
+
+      allPositions =
+        version :| unprocessedPositions
+   in maximum allPositions
 
 
 reverseUnprocessed :: Projected state -> Projected state
@@ -66,13 +78,13 @@ project' Projection{initial, handlers} messages =
               Right updatedState ->
                 projected
                   { state = updatedState
-                  , version = Message.streamPosition message
+                  , version = Functions.DoesExist $ Message.streamPosition message
                   }
               Left newError ->
                 projected
                   { unprocessed = UnprocessedMessage message newError : unprocessed
                   }
-   in foldr applyHandler (empty initial) (toList messages)
+   in foldl' (flip applyHandler) (empty initial) (toList messages)
 
 
 project :: Projection state -> NonEmpty Message -> Projected state
@@ -90,20 +102,20 @@ fetch withConnection batchSize streamName projection =
           (firstMessage : otherMessages) -> do
             let nonEmptyMessages = firstMessage :| otherMessages
 
-            let (Projected newErrors updatedState lastPosition) =
+            let (Projected newErrors updatedState updatedVersion) =
                   project' (projection{initial = state}) nonEmptyMessages
 
                 updatedProjectedState =
                   Projected
                     { unprocessed = newErrors <> unprocessed
                     , state = updatedState
-                    , version = lastPosition
+                    , version = updatedVersion
                     }
 
             if batchSize == Functions.Unlimited
               then pure $ Just updatedProjectedState
               else
-                let nextPosition = lastPosition + 1
+                let nextPosition = Message.streamPosition (NonEmpty.last nonEmptyMessages) + 1
                  in query nextPosition updatedProjectedState
           _ ->
             pure $

@@ -7,7 +7,7 @@ synopsis: Client library for Message-DB
 description: Client library for interacting with Message-DB installed in PostgreSQL
 
 build-type: Simple
-category: database, eventsourcing
+category: database, eventsourcing, eventstore
 homepage: https://github.com/Disco-Dave/message-db#readme
 bug-reports:https://github.com/Disco-Dave/message-db/issues
 
@@ -25,6 +25,7 @@ common shared
     AllowAmbiguousTypes
     DeriveGeneric
     DerivingVia
+    FlexibleContexts
     GeneralizedNewtypeDeriving
     LambdaCase
     NamedFieldPuns

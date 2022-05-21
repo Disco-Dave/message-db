@@ -3,11 +3,12 @@
 -- | Provides access to the functions described at http://docs.eventide-project.org/user-guide/message-db/server-functions.html
 module MessageDb.Functions
   ( WithConnection,
-    ExpectedVersion (..),
     BatchSize (..),
     Condition (..),
     ConsumerGroup (..),
     Correlation (..),
+    StreamVersion (..),
+    ExpectedVersion (..),
     ExpectedVersionViolation (..),
     parseExpectedVersionViolation,
     lookupById,
@@ -23,6 +24,7 @@ where
 import Control.Exception (Exception, handle, throwIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as Char8
+import Data.Coerce (Coercible, coerce)
 import Data.Maybe (listToMaybe)
 import Data.String (IsString)
 import Data.Text (Text)
@@ -63,17 +65,23 @@ newtype Correlation = Correlation
   deriving (Show) via Text
 
 
-data ExpectedVersion
+data StreamVersion
   = DoesNotExist
-  | StreamVersion Message.StreamPosition
+  | DoesExist Message.StreamPosition
   deriving (Show, Eq, Ord)
 
 
-expectedVersionToInteger :: ExpectedVersion -> Integer
-expectedVersionToInteger expectedVersion =
-  case expectedVersion of
+newtype ExpectedVersion = ExpectedVersion
+  { fromExpectedVersion :: StreamVersion
+  }
+  deriving (Show, Eq, Ord)
+
+
+versionToInteger :: Coercible a StreamVersion => a -> Integer
+versionToInteger version =
+  case coerce version of
     DoesNotExist -> -1
-    StreamVersion position -> toInteger position
+    DoesExist position -> toInteger position
 
 
 newtype ExpectedVersionViolation = ExpectedVersionViolation
@@ -133,12 +141,21 @@ createdAtTimestampField =
   Message.CreatedAtTimestamp . Time.localTimeToUTC Time.utc <$> field
 
 
+streamPositionField :: RowParser Message.StreamPosition
+streamPositionField = do
+  fieldWith $ \f mdata -> do
+    integer <- FromField.fromField f mdata
+    if integer >= 0
+      then pure . Message.StreamPosition $ fromInteger integer
+      else FromField.returnError FromField.Incompatible f "Stream position is negative"
+
+
 fromTable :: RowParser Message
 fromTable = do
   messageId <- fmap Message.MessageId field
   streamName <- fmap StreamName field
   messageType <- fmap Message.MessageType field
-  streamPosition <- fmap Message.StreamPosition field
+  streamPosition <- streamPositionField
   globalPosition <- fmap Message.GlobalPosition field
   payload <- maybe Message.nullPayload Message.Payload <$> field
   metadata <- maybe Message.nullMetadata Message.Metadata <$> field
@@ -156,7 +173,7 @@ fromFunction = do
 
   streamName <- fmap StreamName field
   messageType <- fmap Message.MessageType field
-  streamPosition <- fmap Message.StreamPosition field
+  streamPosition <- streamPositionField
   globalPosition <- fmap Message.GlobalPosition field
 
   payload <- do
@@ -255,7 +272,7 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
         , Message.fromMessageType messageType
         , Aeson.toJSON payload
         , fmap Aeson.toJSON metadata
-        , fmap expectedVersionToInteger expectedVersion
+        , fmap versionToInteger expectedVersion
         )
 
       handleSqlError sqlError =
@@ -269,7 +286,7 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
     handle handleSqlError $
       Postgres.query connection query params
 
-  pure (messageId, Message.StreamPosition position)
+  pure (messageId, fromInteger position)
 
 
 -- | Retrieve messages from a single stream, optionally specifying the starting position, the number of messages to retrieve, and an additional condition that will be appended to the SQL command's WHERE clause.
@@ -301,7 +318,7 @@ getStreamMessages connection streamName position batchSize condition =
         |]
       params =
         ( fromStreamName streamName
-        , maybe 0 Message.fromStreamPosition position
+        , maybe 0 toInteger position
         , maybe 1000 batchSizeToInteger batchSize
         , fmap fromCondition condition
         )
@@ -390,5 +407,5 @@ streamVersion connection streamName = do
   result <- Postgres.query connection query params
 
   pure $ case result of
-    [Postgres.Only (Just position)] -> Just $ Message.StreamPosition position
+    [Postgres.Only (Just position)] -> Just $ fromInteger position
     _ -> Nothing

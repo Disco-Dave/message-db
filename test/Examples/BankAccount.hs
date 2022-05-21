@@ -37,6 +37,7 @@ module Examples.BankAccount
     subscribe,
     send,
     markAsProcessed,
+    fetch,
   )
 where
 
@@ -58,7 +59,7 @@ import qualified Data.UUID.V4 as UUID.V4
 import GHC.Generics (Generic)
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
-import MessageDb.Projection (Projection (Projection))
+import MessageDb.Projection (Projected, Projection (Projection, handlers))
 import qualified MessageDb.Projection as Projection
 import qualified MessageDb.Projection.Handlers as ProjectionHandlers
 import MessageDb.StreamName (CategoryName, StreamName)
@@ -437,6 +438,31 @@ withdraw payload bankAccount =
         else reject WithdrawFromClosedAccount
 
 
+fetch :: AccountId -> TestApp (Maybe (Projected BankAccount))
+fetch accountId = do
+  TestAppData{connectionPool} <- ask
+  liftIO $
+    Projection.fetch
+      (Pool.withResource connectionPool)
+      (Functions.FixedSize 100)
+      (entityStream accountId)
+      projection
+
+
+send :: forall command. (Aeson.ToJSON command, Typeable command) => AccountId -> command -> TestApp ()
+send accountId command = do
+  TestAppData{connectionPool} <- ask
+
+  liftIO . void . Pool.withResource connectionPool $ \connection ->
+    Functions.writeMessage
+      connection
+      (commandStream accountId)
+      (Message.typeOf @command)
+      command
+      (Just Message.nullMetadata)
+      Nothing
+
+
 handleCommand ::
   forall command failure success.
   ( Typeable failure
@@ -452,14 +478,7 @@ handleCommand processCommand TypedMessage{payload, globalPosition, streamName} =
 
   let targetStream = entityStream accountId
 
-  TestAppData{connectionPool} <- ask
-  projectedAccount <-
-    liftIO $
-      Projection.fetch
-        (Pool.withResource connectionPool)
-        (Functions.FixedSize 100)
-        targetStream
-        projection
+  projectedAccount <- fetch accountId
 
   let bankAccount = maybe initialAccount Projection.state projectedAccount
       hasBeenRan = Set.member globalPosition $ commandsProcessed bankAccount
@@ -471,10 +490,10 @@ handleCommand processCommand TypedMessage{payload, globalPosition, streamName} =
             Right success -> (Message.typeOf @success, Aeson.toJSON success)
 
         metadata = AccountMetadata globalPosition
+
         expectedVersion =
-          case fmap Projection.version projectedAccount of
-            Nothing -> Functions.DoesNotExist
-            Just position -> Functions.StreamVersion position
+          Functions.ExpectedVersion $
+            maybe Functions.DoesNotExist Projection.version projectedAccount
 
     TestApp.withConnection $ \connection ->
       liftIO . void $
@@ -502,17 +521,3 @@ subscribe =
                   & attach (Message.typeOf @Deposit) deposit
                   & attach (Message.typeOf @Withdraw) withdraw
         }
-
-
-send :: forall command. (Aeson.ToJSON command, Typeable command) => AccountId -> command -> TestApp ()
-send accountId command = do
-  TestAppData{connectionPool} <- ask
-
-  liftIO . void . Pool.withResource connectionPool $ \connection ->
-    Functions.writeMessage
-      connection
-      (commandStream accountId)
-      (Message.typeOf @command)
-      command
-      (Just Message.nullMetadata)
-      Nothing
