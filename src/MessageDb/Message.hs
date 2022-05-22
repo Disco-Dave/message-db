@@ -1,3 +1,6 @@
+{- | Messages are the atomic units of information exchanged between services and between applications and services.
+ - Read more at: http://docs.eventide-project.org/user-guide/messages-and-message-data
+-}
 module MessageDb.Message
   ( MessageId (..),
     newMessageId,
