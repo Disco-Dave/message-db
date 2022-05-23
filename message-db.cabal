@@ -18,6 +18,10 @@ copyright: 2022 David Burkett
 license: BSD-3-Clause
 license-file: LICENSE
 
+extra-source-files:
+  README.md
+  ChangeLog.md
+
 common shared
   default-language: Haskell2010
 

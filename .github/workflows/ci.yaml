@@ -116,7 +116,7 @@ jobs:
 
       - name: "Bundle the documentation"
         run: |
-          cabal haddock --builddir ./hackage-dist --haddock-for-hackage --haddock-options=--hyperlinked-source
+          cabal haddock --builddir ./hackage-dist --haddock-for-hackage --enable-doc
 
       - name: "Publish package to Hackage"
         if: github.event_name == 'release'
