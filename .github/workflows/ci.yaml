@@ -1,0 +1,133 @@
+name: "ci"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  #release:
+    #types: ["published"]
+
+jobs:
+  hlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: "Set up HLint"
+        uses: haskell/actions/hlint-setup@v2
+        with:
+          version: "3.4"
+
+      - name: "Run HLint"
+        uses: haskell/actions/hlint-run@v2
+        with:
+          path: '["src/", "test/"]'
+          fail-on: warning
+
+  cabal:
+    name: cabal ${{ matrix.cabal }} / ghc ${{ matrix.ghc }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        cabal: ["3.6"]
+        ghc:
+          - "8.10.7"
+          - "9.0.2"
+          - "9.2.2"
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: "./.github/actions/cabal-build"
+        name: Build
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+
+  stack:
+    name: stack ${{ matrix.stack }} / ${{ matrix.resolver }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        stack: ["2.7.5"]
+        resolver:
+          - "lts-18.28"
+          - "lts-19.7"
+          - "nightly"
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: "./.github/actions/stack-build"
+        name: Build
+        with:
+          resolver: ${{ matrix.resolver }}
+          stack-version: ${{ matrix.stack }}
+
+  #publish:
+    #name: "publish"
+    #runs-on: "ubuntu-latest"
+    #needs:
+      #- hlint
+      #- cabal
+      #- stack
+    #steps:
+      #- uses: actions/checkout@v2
+
+      #- uses: haskell/actions/setup@v1
+        #id: setup-haskell-cabal
+        #name: Setup Haskell and Cabal
+        #with:
+          #ghc-version: "8.10.7"
+          #cabal-version: "3.6"
+
+      #- name: Freeze
+        #run: |
+          #cabal freeze
+
+      #- uses: actions/cache@v2.1.3
+        #name: Cache ~/.cabal/store
+        #with:
+          #path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+          #key: Linux-8.10.7-${{ hashFiles('cabal.project.freeze') }}
+
+      #- name: "Bundle the package"
+        #run: |
+          #cabal sdist --builddir ./hackage-dist
+
+      #- name: "Bundle the documentation"
+        #run: |
+          #cabal haddock --builddir ./hackage-dist --haddock-for-hackage --haddock-options=--hyperlinked-source
+
+      #- name: "Publish package to Hackage"
+        #if: github.event_name == 'release'
+        #env:
+          #HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+          #HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        #run: |
+          #cabal upload --publish -u $HACKAGE_USER -p $HACKAGE_PASSWORD ./hackage-dist/sdist/*.tar.gz
+
+      #- name: "Publish candidate package to Hackage"
+        #if: github.event_name == 'push'
+        #env:
+          #HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+          #HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        #run: |
+          #cabal upload -u $HACKAGE_USER -p $HACKAGE_PASSWORD ./hackage-dist/sdist/*.tar.gz
+
+      #- name: "Publish docs to Hackage"
+        #if: github.event_name == 'release'
+        #env:
+          #HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+          #HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        #run: |
+          #cabal upload --publish -u $HACKAGE_USER -p $HACKAGE_PASSWORD -d ./hackage-dist/*-docs.tar.gz
+
+      #- name: "Publish candidate docs to Hackage"
+        #if: github.event_name == 'push'
+        #env:
+          #HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+          #HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        #run: |
+          #cabal upload -u $HACKAGE_USER -p $HACKAGE_PASSWORD -d ./hackage-dist/*-docs.tar.gz
