@@ -37,6 +37,7 @@ import MessageDb.StreamName (StreamName (..))
 import Numeric.Natural (Natural)
 
 
+-- | Unique id of a message. Most be unique across the entire event store.
 newtype MessageId = MessageId
   { fromMessageId :: UUID
   }
@@ -44,6 +45,7 @@ newtype MessageId = MessageId
   deriving (Show) via UUID
 
 
+-- | Create a new unique message id.
 newMessageId :: IO MessageId
 newMessageId =
   fmap MessageId UUID.V4.nextRandom
@@ -58,6 +60,7 @@ instance Aeson.FromJSON MessageId where
   parseJSON = fmap MessageId . Aeson.parseJSON
 
 
+-- | The type of a message. You can use this later to determine what kind of event or command a message is.
 newtype MessageType = MessageType
   { fromMessageType :: Text
   }
@@ -65,6 +68,7 @@ newtype MessageType = MessageType
   deriving (Show) via Text
 
 
+-- | Converts a type's name to a 'MessageType'. For example 'typeOf @Bool' will be 'MessageType "Bool"'.
 typeOf :: forall payload. Typeable payload => MessageType
 typeOf =
   let eventName = Text.pack . show . typeRep $ Proxy @payload
@@ -80,6 +84,7 @@ instance Aeson.FromJSON MessageType where
   parseJSON = fmap MessageType . Aeson.parseJSON
 
 
+-- | Position within a stream. This starts at 0 and has no gaps.
 newtype StreamPosition = StreamPosition
   { fromStreamPosition :: Natural
   }
