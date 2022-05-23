@@ -97,18 +97,19 @@ jobs:
         id: setup-haskell-cabal
         name: Setup Haskell and Cabal
         with:
-          ghc-version: "8.10.7"
+          ghc-version: "9.2.2"
           cabal-version: "3.6"
 
       - name: Freeze
         run: |
           cabal freeze
+          head -n -1 cabal.project.freeze > deps
 
       - uses: actions/cache@v2.1.3
         name: Cache ~/.cabal/store
         with:
           path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-          key: Linux-8.10.7-${{ hashFiles('cabal.project.freeze') }}
+          key: publish-${{ hashFiles('deps') }}
 
       - name: "Bundle the package"
         run: |
