@@ -24,7 +24,7 @@ runs:
       name: Cache ~/.stack
       with:
         path: ${{ steps.setup-haskell-stack.outputs.stack-root }}
-        key: ${{ runner.os }}-${{ matrix.resolver }}-stack
+        key: ${{ runner.os }}-${{ inputs.resolver }}-stack
 
     - name: Setup stack
       shell: bash
