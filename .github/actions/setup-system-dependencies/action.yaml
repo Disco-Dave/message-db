@@ -6,10 +6,10 @@ runs:
     - name: "Install system dependencies"
       shell: bash
       run: |
-        apt update
-        apt install -y libpq-dev postgresql-14
+        sudo apt update
+        sudo apt install -y libpq-dev postgresql-14
 
     - name: "Link postgresql binaries to /usr/bin"
       shell: bash
       run: |
-        ln -sf /usr/lib/postgresql/14/bin/* /usr/bin/
+        sudo ln -sf /usr/lib/postgresql/14/bin/* /usr/bin/
