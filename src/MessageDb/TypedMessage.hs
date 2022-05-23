@@ -12,6 +12,7 @@ import qualified MessageDb.Message as Message
 import MessageDb.StreamName (StreamName)
 
 
+-- | A message with payload and metadata parsed from JSON.
 data TypedMessage payload metadata = TypedMessage
   { messageId :: Message.MessageId
   , streamName :: StreamName

@@ -1,3 +1,4 @@
+-- | The message type that is written to failure streams when using the 'writeToCategory' 'FailureStrategy'.
 module MessageDb.Subscription.FailedMessage
   ( FailedMessage (..),
     messageType,
@@ -16,15 +17,17 @@ import qualified MessageDb.Message as Message
 import qualified MessageDb.TypedMessage as TypedMessage
 
 
+-- | A message that was unable to be handled.
 data FailedMessage = FailedMessage
   { message :: Message
   , reason :: Text
   }
 
 
+-- | The message type of a 'FailedMessage'.
 messageType :: Message.MessageType
 messageType =
-  "FailedMessage"
+  Message.typeOf @FailedMessage
 
 
 toKeyValues :: Aeson.KeyValue keyValue => FailedMessage -> [keyValue]
@@ -46,6 +49,9 @@ instance Aeson.FromJSON FailedMessage where
     pure $ FailedMessage{..}
 
 
+{- | If you have a stream of 'FailedMessage' messages, then you can use
+ this function so you can handle the original messages that failed.
+-}
 handleFailures :: Handlers state output -> Handlers state output
 handleFailures originalHandlers =
   let failedMessageHandle untypedMessage state =
@@ -58,6 +64,5 @@ handleFailures originalHandlers =
                 }
           Right failedMessage ->
             let originalMessage = message failedMessage
-                originalType = Message.messageType originalMessage
-             in Handlers.handle originalType originalHandlers originalMessage state
+             in Handlers.handle originalHandlers originalMessage state
    in Map.insert messageType failedMessageHandle Handlers.empty

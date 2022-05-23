@@ -1,8 +1,10 @@
+-- | A projection is an aggregation of all messages in a stream.
 module MessageDb.Projection
   ( Projection (..),
     Functions.BatchSize (..),
     UnprocessedMessage (..),
     Projected (..),
+    mapProjection,
     versionIncludingUnprocessed,
     project,
     fetch,
@@ -22,12 +24,23 @@ import qualified MessageDb.Projection.Handlers as ProjectionHandlers
 import MessageDb.StreamName (StreamName)
 
 
+-- | Defines how to perform a projection a stream.
 data Projection state = Projection
   { initial :: state
   , handlers :: ProjectionHandlers state
   }
 
 
+-- | Allows you to convert the state of a projection.
+mapProjection :: (a -> b) -> (b -> a) -> Projection a -> Projection b
+mapProjection aToB bToA Projection{..} =
+  Projection
+    { initial = aToB initial
+    , handlers = ProjectionHandlers.map aToB bToA handlers
+    }
+
+
+-- | A message that was not able to be processed.
 data UnprocessedMessage = UnprocessedMessage
   { message :: Message
   , reason :: HandleError
@@ -36,14 +49,16 @@ data UnprocessedMessage = UnprocessedMessage
 instance Exception UnprocessedMessage
 
 
+-- | A projected state
 data Projected state = Projected
   { unprocessed :: [UnprocessedMessage]
   , state :: state
   , version :: Functions.StreamVersion
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Functor)
 
 
+-- | Constructs an empty projection.
 empty :: state -> Projected state
 empty initialState =
   Projected
@@ -53,6 +68,7 @@ empty initialState =
     }
 
 
+-- | Version of the projection with unprocessed messages included.
 versionIncludingUnprocessed :: Projected state -> Functions.StreamVersion
 versionIncludingUnprocessed Projected{..} =
   let unprocessedPositions =
@@ -73,25 +89,26 @@ reverseUnprocessed projected =
 project' :: Projection state -> NonEmpty Message -> Projected state
 project' Projection{initial, handlers} messages =
   let applyHandler message projected@Projected{state, unprocessed} =
-        let handle = ProjectionHandlers.handle (Message.messageType message) handlers
-         in case handle message state of
-              Right updatedState ->
-                projected
-                  { state = updatedState
-                  , version = Functions.DoesExist $ Message.streamPosition message
-                  }
-              Left newError ->
-                projected
-                  { unprocessed = UnprocessedMessage message newError : unprocessed
-                  }
+        case ProjectionHandlers.handle handlers message state of
+          Right updatedState ->
+            projected
+              { state = updatedState
+              , version = Functions.DoesExist $ Message.streamPosition message
+              }
+          Left newError ->
+            projected
+              { unprocessed = UnprocessedMessage message newError : unprocessed
+              }
    in foldl' (flip applyHandler) (empty initial) (toList messages)
 
 
+-- | Project a state of a stream by aggregating messages.
 project :: Projection state -> NonEmpty Message -> Projected state
 project messages =
   reverseUnprocessed . project' messages
 
 
+-- | Query a stream and project the messages.
 fetch :: forall state. Functions.WithConnection -> Functions.BatchSize -> StreamName -> Projection state -> IO (Maybe (Projected state))
 fetch withConnection batchSize streamName projection =
   let query position projected@Projected{state, unprocessed} = do

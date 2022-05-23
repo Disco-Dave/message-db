@@ -24,6 +24,7 @@ common shared
   default-extensions:
     AllowAmbiguousTypes
     DeriveGeneric
+    DeriveFunctor
     DerivingVia
     FlexibleContexts
     GeneralizedNewtypeDeriving

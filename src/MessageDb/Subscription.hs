@@ -1,3 +1,4 @@
+-- | Subscribe to a category and react to the messages.
 module MessageDb.Subscription
   ( Subscription (..),
     subscribe,
@@ -28,6 +29,7 @@ import qualified MessageDb.Subscription.PositionStrategy as PositionStrategy
 import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
 
 
+-- | Defines how to subscribe to a category.
 data Subscription = Subscription
   { categoryName :: CategoryName
   , messagesPerTick :: NumberOfMessages
@@ -42,6 +44,7 @@ data Subscription = Subscription
   }
 
 
+-- | Construct a new subscription.
 subscribe :: CategoryName -> Subscription
 subscribe categoryName =
   Subscription
@@ -58,6 +61,7 @@ subscribe categoryName =
     }
 
 
+-- | Start the subscription. Notice this will never return.
 start :: Functions.WithConnection -> Subscription -> IO Void
 start withConnection Subscription{..} = do
   let sleep :: IO ()
@@ -79,7 +83,7 @@ start withConnection Subscription{..} = do
       handle :: Message -> IO ()
       handle message = do
         result <-
-          case SubscriptionHandlers.handle (Message.messageType message) handlers message of
+          case SubscriptionHandlers.handle handlers message of
             Left err ->
               pure . Left $ FailureStrategy.HandleFailure err
             Right effect ->

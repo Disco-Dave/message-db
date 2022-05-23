@@ -1,3 +1,4 @@
+-- | Strategies for saving subscription position.
 module MessageDb.Subscription.PositionStrategy
   ( LastPositionSaved,
     CurrentPosition,
@@ -20,16 +21,20 @@ import Numeric.Natural (Natural)
 
 
 type LastPositionSaved = Message.GlobalPosition
+
 type CurrentPosition = Message.GlobalPosition
+
 type PositionSaved = Message.GlobalPosition
 
 
+-- | Strategy for saving and restoring a subscription's position.
 data PositionStrategy = PositionStrategy
   { restore :: IO Message.GlobalPosition
   , save :: LastPositionSaved -> CurrentPosition -> IO (Maybe PositionSaved)
   }
 
 
+-- | Start at zero and don't ever save the position.
 dontSave :: PositionStrategy
 dontSave =
   PositionStrategy
@@ -38,6 +43,7 @@ dontSave =
     }
 
 
+-- | Minimum difference between the current position and last position saved to save the position.
 newtype PositionUpdateInterval = PositioUpdateInterval
   { fromPositionUpdateInterval :: NumberOfMessages
   }
@@ -45,6 +51,7 @@ newtype PositionUpdateInterval = PositioUpdateInterval
   deriving (Show) via NumberOfMessages
 
 
+-- | Write the subscription's position to a stream.
 writeToStream :: Functions.WithConnection -> PositionUpdateInterval -> StreamName -> PositionStrategy
 writeToStream withConnection positionUpdateInterval streamName =
   let messageType :: Message.MessageType

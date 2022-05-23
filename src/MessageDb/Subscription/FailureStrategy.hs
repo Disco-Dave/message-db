@@ -1,3 +1,4 @@
+-- | Strategies for dealing with message handle failures.
 module MessageDb.Subscription.FailureStrategy
   ( FailureReason (..),
     FailureStrategy (..),
@@ -23,23 +24,29 @@ import MessageDb.Subscription.FailedMessage (FailedMessage (FailedMessage))
 import qualified MessageDb.Subscription.FailedMessage as FailedMessage
 
 
+-- | Reason why the message handle failed.
 data FailureReason
   = HandleFailure HandleError
   | UnknownFailure SomeException
   deriving (Show)
+
+
 instance Exception FailureReason
 
 
+-- | Strategy for logging failures.
 newtype FailureStrategy = FailureStrategy
   { logFailure :: Message -> FailureReason -> IO ()
   }
 
 
+-- | Do nothing, ignore all failures.
 ignoreFailures :: FailureStrategy
 ignoreFailures = FailureStrategy $ \_ _ ->
   pure ()
 
 
+-- | Combine a strategy with another so that they both run for a failure.
 combine :: FailureStrategy -> FailureStrategy -> FailureStrategy
 combine first second = FailureStrategy $ \message reason ->
   logFailure first message reason
@@ -54,7 +61,12 @@ instance Monoid FailureStrategy where
   mempty = ignoreFailures
 
 
-writeToCategory :: (FailureReason -> Bool) -> Functions.WithConnection -> StreamName.CategoryName -> FailureStrategy
+-- | Write a failure to a category. Use @shouldKeep@ to filter out message failures you don't want to log.
+writeToCategory ::
+  (FailureReason -> Bool) ->
+  Functions.WithConnection ->
+  StreamName.CategoryName ->
+  FailureStrategy
 writeToCategory shouldKeep withConnection categoryName =
   let logFailureToCategory message reason =
         when (shouldKeep reason) $ do
@@ -85,6 +97,7 @@ writeToCategory shouldKeep withConnection categoryName =
    in FailureStrategy logFailureToCategory
 
 
+-- | Only write 'UnknownFailure's to a category.
 writeUnknownFailuresToCategory :: Functions.WithConnection -> StreamName.CategoryName -> FailureStrategy
 writeUnknownFailuresToCategory =
   writeToCategory $ \case
@@ -92,6 +105,7 @@ writeUnknownFailuresToCategory =
     _ -> False
 
 
+-- | Write either 'UnknownFailure's or 'HandleFailure's to a category.
 writeAllToCategory :: Functions.WithConnection -> StreamName.CategoryName -> FailureStrategy
 writeAllToCategory =
   writeToCategory $ const True
