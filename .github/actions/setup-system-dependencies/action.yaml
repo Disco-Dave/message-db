@@ -1,0 +1,15 @@
+name: "Setup system dependencies"
+description: "Sets up system dependencies needed to build and test the library"
+runs:
+  using: "composite"
+  steps:
+    - name: "Install system dependencies"
+      shell: bash
+      run: |
+        apt update
+        apt install -y libpq-dev postgresql-14
+
+    - name: "Link postgresql binaries to /usr/bin"
+      shell: bash
+      run: |
+        ln -sf /usr/lib/postgresql/14/bin/* /usr/bin/

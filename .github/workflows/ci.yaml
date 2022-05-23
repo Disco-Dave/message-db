@@ -37,6 +37,8 @@ jobs:
           - "9.0.2"
           - "9.2.2"
     steps:
+      - uses: "./.github/actions/setup-system-dependencies"
+
       - uses: actions/checkout@v2
 
       - uses: "./.github/actions/cabal-build"
@@ -57,6 +59,8 @@ jobs:
           - "lts-19.7"
           - "nightly"
     steps:
+      - uses: "./.github/actions/setup-system-dependencies"
+
       - uses: actions/checkout@v2
 
       - uses: "./.github/actions/stack-build"
