@@ -94,8 +94,8 @@ withDatabaseUrl use = do
           }
 
   let retryPolicy =
-        Retry.capDelay 1_000_000 $
-          Retry.exponentialBackoff 1_000
+          Retry.limitRetriesByCumulativeDelay 1_000_000 $
+            Retry.exponentialBackoff 1_000
 
       exceptionHandlers =
         let restartFor :: forall e a. Exception e => a -> Handler IO Bool
