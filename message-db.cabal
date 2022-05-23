@@ -41,16 +41,17 @@ common shared
 
   ghc-options:
     -Weverything 
+    -Wno-all-missed-specialisations 
+    -Wno-identities
     -Wno-implicit-prelude 
-    -Wno-safe 
-    -Wno-unsafe 
+    -Wno-missed-specialisations 
+    -Wno-missing-deriving-strategies
     -Wno-missing-exported-signatures 
     -Wno-missing-import-lists 
-    -Wno-missed-specialisations 
-    -Wno-all-missed-specialisations 
     -Wno-missing-local-signatures 
     -Wno-monomorphism-restriction 
-    -Wno-missing-deriving-strategies
+    -Wno-safe 
+    -Wno-unsafe 
 
   if impl(ghc >= 8.10)
     ghc-options:
