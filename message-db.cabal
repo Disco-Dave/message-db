@@ -4,11 +4,11 @@ name: message-db
 version: 0.1.0.0
 
 synopsis: Client library for Message-DB installed in PostgreSQL.
-description: Client library for Message-DB installed in PostgreSQL.
+description: See the readme on github for me info: https://github.com/Disco-Dave/message-db#readme
 
 build-type: Simple
 category: database, eventsourcing, eventstore
-homepage: https://github.com/Disco-Dave/message-db#readme
+homepage: https://github.com/Disco-Dave/message-db
 bug-reports:https://github.com/Disco-Dave/message-db/issues
 
 author: David Burkett
