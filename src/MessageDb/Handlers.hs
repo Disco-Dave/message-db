@@ -46,7 +46,7 @@ type TypedHandler state output payload metadata = TypedMessage payload metadata 
 type Handlers state output = Map MessageType (Handler state output)
 
 
--- | An set of handlers.
+-- | A set of handlers.
 empty :: Handlers state output
 empty =
   Map.empty
