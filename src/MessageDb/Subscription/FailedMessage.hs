@@ -14,7 +14,6 @@ import MessageDb.Handlers (Handlers)
 import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
-import qualified MessageDb.TypedMessage as TypedMessage
 
 
 -- | A message that was unable to be handled.
@@ -27,7 +26,7 @@ data FailedMessage = FailedMessage
 -- | The message type of a 'FailedMessage'.
 messageType :: Message.MessageType
 messageType =
-  Message.typeOf @FailedMessage
+  Message.messageTypeOf @FailedMessage
 
 
 toKeyValues :: Aeson.KeyValue keyValue => FailedMessage -> [keyValue]
@@ -54,15 +53,7 @@ instance Aeson.FromJSON FailedMessage where
 -}
 handleFailures :: Handlers state output -> Handlers state output
 handleFailures originalHandlers =
-  let failedMessageHandle untypedMessage state =
-        case Message.typedPayload @FailedMessage untypedMessage of
-          Left payloadReason ->
-            Left . Handlers.MessageConversionFailure $
-              TypedMessage.ConversionFailure
-                { failedPayloadReason = Just payloadReason
-                , failedMetadataReason = Nothing
-                }
-          Right failedMessage ->
-            let originalMessage = message failedMessage
-             in Handlers.handle originalHandlers originalMessage state
-   in Map.insert messageType failedMessageHandle Handlers.empty
+  let failedMessageHandle failedMessage state =
+        let originalMessage = message failedMessage
+         in Handlers.handle originalHandlers originalMessage state
+   in Handlers.addHandler messageType failedMessageHandle Handlers.emptyHandlers

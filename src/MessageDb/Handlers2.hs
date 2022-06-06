@@ -1,17 +1,20 @@
-module MessageDb.Handlers
-  ( HandleError (..),
-    Handler,
-    Handlers,
-    State,
-    Output,
-    MessageHandler (..),
-    emptyHandlers,
-    listToHandlers,
-    addHandler,
-    removeHandler,
-    handle,
-  )
-where
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
+module MessageDb.Handlers2 where
+
+--  ( HandleError (..),
+--    Handler,
+--    Handlers,
+--    State,
+--    Output,
+--    MessageHandler (..),
+--    emptyHandlers,
+--    listToHandlers,
+--    addHandler,
+--    removeHandler,
+--    handle,
+--  )
 
 import Control.Exception (Exception)
 import qualified Data.Aeson as Aeson
@@ -39,68 +42,42 @@ type Handler state output = Message -> state -> Either Message.ParseMessageFailu
 type Handlers state output = Map Message.MessageType (Handler state output)
 
 
-type family State (handler :: Type) :: Type where
-  State (Message -> IO ()) = ()
-  State (Message -> _payload -> IO ()) = ()
-  State (Message -> _payload -> _metadata -> IO ()) = ()
-  State (Handler state _output) = state
-  State (Message -> _payload -> _metadata -> state -> _output) = state
-  State (Message -> _payload -> state -> _output) = state
-  State (Message -> state -> _output) = state
+class MessageHandler handler state output | handler -> state output where
+  toHandler :: handler -> Handler state output
 
 
-type family Output (handler :: Type) :: Type where
-  Output (Message -> IO ()) = IO ()
-  Output (Message -> _payload -> IO ()) = IO ()
-  Output (Message -> _payload -> _metadata -> IO ()) = IO ()
-  Output (Handler _state output) = output
-  Output (Message -> _payload -> _metadata -> _state -> output) = output
-  Output (Message -> _payload -> _state -> output) = output
-  Output (Message -> _state -> output) = output
-
-
-class MessageHandler handler where
-  toHandler :: handler -> Handler (State handler) (Output handler)
-
-
-instance MessageHandler (Message -> IO ()) where
+instance MessageHandler (Message -> IO ()) () (IO ()) where
   toHandler original message _ =
     pure $ original message
 
 
-instance Aeson.FromJSON payload => MessageHandler (Message -> payload -> IO ()) where
+instance Aeson.FromJSON payload => MessageHandler (Message -> payload -> IO ()) () (IO ()) where
   toHandler original message _ = do
     Message.ParsedMessage{..} <- Message.parseMessage @payload @Message.Metadata message
     pure $ original message parsedPayload
 
 
-instance (Aeson.FromJSON payload, Aeson.FromJSON metadata) => MessageHandler (Message -> payload -> metadata -> IO ()) where
+instance (Aeson.FromJSON payload, Aeson.FromJSON metadata) => MessageHandler (Message -> payload -> metadata -> IO ()) () (IO ()) where
   toHandler original message _ = do
     Message.ParsedMessage{..} <- Message.parseMessage @payload @metadata message
     pure $ original message parsedPayload parsedMetadata
 
 
-instance MessageHandler (Handler state output) where
+instance MessageHandler (Handler state output) state output where
   toHandler = id
 
 
-instance (Aeson.FromJSON payload, Aeson.FromJSON metadata) => MessageHandler (Message -> payload -> metadata -> state -> output) where
+instance (Aeson.FromJSON payload, Aeson.FromJSON metadata) => MessageHandler (Message -> payload -> metadata -> state -> output) state output where
   toHandler original message state = do
     Message.ParsedMessage{..} <- Message.parseMessage @payload @metadata message
     pure $ original message parsedPayload parsedMetadata state
 
-
-instance
-  ( State (Message -> payload -> state -> output) ~ state
-  , Output (Message -> payload -> state -> output) ~ output
-  , Aeson.FromJSON payload
-  ) =>
-  MessageHandler (Message -> payload -> state -> output)
-  where
+instance ( Aeson.FromJSON payload) => MessageHandler (Message -> payload -> state -> output) state output where
   toHandler original message state = do
     Message.ParsedMessage{..} <- Message.parseMessage @payload @Message.Metadata message
     pure $ original message parsedPayload state
 
+{-
 
 instance
   ( State (Message -> state -> output) ~ state
@@ -111,26 +88,21 @@ instance
   toHandler original message state = do
     pure $ original message state
 
-
 emptyHandlers :: Handlers status output
 emptyHandlers =
   Map.empty
-
 
 listToHandlers :: [(Message.MessageType, Handler state output)] -> Handlers state output
 listToHandlers =
   Map.fromList
 
-
 addHandler :: MessageHandler handler => Message.MessageType -> handler -> Handlers (State handler) (Output handler) -> Handlers (State handler) (Output handler)
 addHandler messageType handler =
   Map.insert messageType (toHandler handler)
 
-
 removeHandler :: Message.MessageType -> Handlers status output -> Handlers status output
 removeHandler =
   Map.delete
-
 
 handle :: Handlers state output -> Message -> state -> Either HandleError output
 handle handlers message state =
@@ -139,3 +111,5 @@ handle handlers message state =
       Left HandlerNotFound
     Just untypedHandler ->
       first HandlerParseFailure $ untypedHandler message state
+
+-}

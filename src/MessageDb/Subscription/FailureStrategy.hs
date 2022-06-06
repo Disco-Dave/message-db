@@ -71,12 +71,12 @@ writeToCategory shouldKeep withConnection categoryName =
   let logFailureToCategory message reason =
         when (shouldKeep reason) $ do
           identity <-
-            case StreamName.identity (Message.streamName message) of
+            case StreamName.identityOfStream (Message.streamName message) of
               Nothing -> fmap (StreamName.IdentityName . UUID.toText) UUID.V4.nextRandom
               Just value -> pure value
 
           let streamName =
-                StreamName.addIdentity categoryName identity
+                StreamName.addIdentityToCategory categoryName identity
 
               payload =
                 FailedMessage

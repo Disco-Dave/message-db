@@ -41,6 +41,7 @@ module Examples.BankAccount
   )
 where
 
+import qualified MessageDb
 import Control.Monad (unless, void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadReader (ask))
@@ -120,25 +121,25 @@ newAccountId = do
 -- | Category of bank account commands.
 commandCategory :: CategoryName
 commandCategory =
-  StreamName.category "bankAccount:command"
+  MessageDb.categoryOfStream "bankAccount:command"
 
 
 -- | Stream that you write commands for a specific bank account to.
 commandStream :: AccountId -> StreamName
 commandStream =
-  StreamName.addIdentity commandCategory . coerce
+  MessageDb.addIdentityToCategory commandCategory . coerce
 
 
 -- | Category of bank account events.
 entityCategory :: CategoryName
 entityCategory =
-  StreamName.category "bankAccount"
+  MessageDb.categoryOfStream "bankAccount"
 
 
 -- | The source of truth for a specific bank account. This is a stream of events from processing commands.
 entityStream :: AccountId -> StreamName
 entityStream =
-  StreamName.addIdentity entityCategory . coerce
+  MessageDb.addIdentityToCategory entityCategory . coerce
 
 
 -- | The minimum balance needed to keep an account open.
@@ -536,7 +537,7 @@ handleCommand ::
   TypedMessage command Message.Metadata ->
   TestApp ()
 handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
-  Just accountId <- pure . coerce $ StreamName.identity streamName
+  Just accountId <- pure . coerce $ MessageDb.identityOfStream streamName
 
   let targetStream = entityStream accountId
 

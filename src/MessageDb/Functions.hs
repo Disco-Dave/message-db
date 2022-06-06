@@ -36,7 +36,7 @@ import Database.PostgreSQL.Simple.FromRow (RowParser, field, fieldWith)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
-import MessageDb.StreamName (CategoryName, StreamName (StreamName), fromCategoryName, fromStreamName)
+import MessageDb.StreamName (CategoryName, StreamName (StreamName), categoryNameToText, streamNameToText)
 import MessageDb.Units (NumberOfMessages)
 import Numeric.Natural (Natural)
 
@@ -52,14 +52,14 @@ data ConsumerGroup = ConsumerGroup
 
 
 newtype Condition = Condition
-  { fromCondition :: Text
+  { conditionToText :: Text
   }
   deriving (Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
   deriving (Show) via Text
 
 
 newtype Correlation = Correlation
-  { fromCorrelation :: Text
+  { correlationToText :: Text
   }
   deriving (Eq, Ord, Aeson.ToJSON, Aeson.FromJSON, IsString)
   deriving (Show) via Text
@@ -72,7 +72,7 @@ data StreamVersion
 
 
 newtype ExpectedVersion = ExpectedVersion
-  { fromExpectedVersion :: StreamVersion
+  { expectedToStreamVersion :: StreamVersion
   }
   deriving (Show, Eq, Ord)
 
@@ -85,7 +85,7 @@ versionToInteger version =
 
 
 newtype ExpectedVersionViolation = ExpectedVersionViolation
-  { fromExpectedVersionViolation :: Postgres.SqlError
+  { expectedVersionViolationToSqlError :: Postgres.SqlError
   }
   deriving (Show, Eq)
 instance Exception ExpectedVersionViolation
@@ -136,9 +136,9 @@ batchSizeToInteger batchSize =
     Unlimited -> -1
 
 
-createdAtTimestampField :: RowParser Message.CreatedAtTimestamp
-createdAtTimestampField =
-  Message.CreatedAtTimestamp . Time.localTimeToUTC Time.utc <$> field
+createdAtField :: RowParser Message.CreatedAt
+createdAtField =
+  Message.CreatedAt . Time.localTimeToUTC Time.utc <$> field
 
 
 streamPositionField :: RowParser Message.StreamPosition
@@ -153,13 +153,14 @@ streamPositionField = do
 fromTable :: RowParser Message
 fromTable = do
   messageId <- fmap Message.MessageId field
-  streamName <- fmap StreamName field
+  messageStream <- fmap StreamName field
   messageType <- fmap Message.MessageType field
-  streamPosition <- streamPositionField
-  globalPosition <- fmap Message.GlobalPosition field
-  payload <- maybe Message.nullPayload Message.Payload <$> field
-  metadata <- maybe Message.nullMetadata Message.Metadata <$> field
-  createdAtTimestamp <- createdAtTimestampField
+  messageStreamPosition <- streamPositionField
+  messageGlobalPosition <- fmap Message.GlobalPosition field
+  messagePayload <- maybe Message.nullPayload Message.Payload <$> field
+  messageMetadata <- maybe Message.nullMetadata Message.Metadata <$> field
+  messageCreatedAt <- createdAtField
+
   pure Message{..}
 
 
@@ -171,12 +172,12 @@ fromFunction = do
       Nothing -> FromField.returnError FromField.Incompatible f "Invalid UUID"
       Just uuid -> pure $ Message.MessageId uuid
 
-  streamName <- fmap StreamName field
+  messageStream <- fmap StreamName field
   messageType <- fmap Message.MessageType field
-  streamPosition <- streamPositionField
-  globalPosition <- fmap Message.GlobalPosition field
+  messageStreamPosition <- streamPositionField
+  messageGlobalPosition <- fmap Message.GlobalPosition field
 
-  payload <- do
+  messagePayload <- do
     maybeByteString <- field
     pure $
       maybe
@@ -184,7 +185,7 @@ fromFunction = do
         Message.Payload
         (Aeson.decodeStrict =<< maybeByteString)
 
-  metadata <- do
+  messageMetadata <- do
     maybeByteString <- field
     pure $
       maybe
@@ -192,7 +193,8 @@ fromFunction = do
         Message.Metadata
         (Aeson.decodeStrict =<< maybeByteString)
 
-  createdAtTimestamp <- createdAtTimestampField
+  messageCreatedAt <- createdAtField
+
   pure Message{..}
 
 
@@ -213,7 +215,7 @@ lookupById connection messageId = do
           WHERE id = ?;
         |]
 
-  messages <- Postgres.queryWith fromTable connection query (Postgres.Only $ Message.fromMessageId messageId)
+  messages <- Postgres.queryWith fromTable connection query (Postgres.Only $ Message.messageIdToUUID messageId)
 
   pure $ listToMaybe messages
 
@@ -235,7 +237,7 @@ lookupByPosition connection position = do
           WHERE global_position = ?;
         |]
 
-  messages <- Postgres.queryWith fromTable connection query (Postgres.Only $ Message.fromGlobalPosition position)
+  messages <- Postgres.queryWith fromTable connection query (Postgres.Only $ Message.globalPositionToInteger position)
 
   pure $ listToMaybe messages
 
@@ -267,9 +269,9 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
           );
         |]
       params =
-        ( UUID.toText $ Message.fromMessageId messageId
-        , fromStreamName streamName
-        , Message.fromMessageType messageType
+        ( UUID.toText $ Message.messageIdToUUID messageId
+        , streamNameToText streamName
+        , Message.messageTypeToText messageType
         , Aeson.toJSON payload
         , fmap Aeson.toJSON metadata
         , fmap versionToInteger expectedVersion
@@ -317,10 +319,10 @@ getStreamMessages connection streamName position batchSize condition =
           );
         |]
       params =
-        ( fromStreamName streamName
+        ( streamNameToText streamName
         , maybe 0 toInteger position
         , maybe 1000 batchSizeToInteger batchSize
-        , fmap fromCondition condition
+        , fmap conditionToText condition
         )
    in Postgres.queryWith fromFunction connection query params
 
@@ -358,13 +360,13 @@ getCategoryMessages connection category position batchSize correlation consumerG
           );
         |]
       params =
-        ( fromCategoryName category
-        , maybe 0 Message.fromGlobalPosition position
+        ( categoryNameToText category
+        , maybe 0 Message.globalPositionToInteger position
         , maybe 1000 batchSizeToInteger batchSize
-        , fmap fromCorrelation correlation
+        , fmap correlationToText correlation
         , fmap (toInteger . consumerGroupMember) consumerGroup
         , fmap (toInteger . consumerGroupSize) consumerGroup
-        , fmap fromCondition condition
+        , fmap conditionToText condition
         )
    in Postgres.queryWith fromFunction connection query params
 
@@ -388,7 +390,7 @@ getLastStreamMessage connection streamName =
           );
         |]
       params =
-        Postgres.Only (fromStreamName streamName)
+        Postgres.Only (streamNameToText streamName)
    in listToMaybe <$> Postgres.queryWith fromFunction connection query params
 
 
@@ -402,7 +404,7 @@ streamVersion connection streamName = do
           );
         |]
       params =
-        Postgres.Only (fromStreamName streamName)
+        Postgres.Only (streamNameToText streamName)
 
   result <- Postgres.query connection query params
 

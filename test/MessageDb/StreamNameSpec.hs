@@ -26,8 +26,8 @@ spec = do
       categoryName <- forAll genCategoryName
       identityName <- forAll genIdentityName
 
-      let streamName = StreamName.addIdentity categoryName identityName
-       in StreamName.category streamName === categoryName
+      let streamName = StreamName.addIdentityToCategory categoryName identityName
+       in StreamName.categoryOfStream streamName === categoryName
 
   describe "IdentityName" $ do
     it "can be serialized and deserialized from json" . hedgehog $
@@ -37,11 +37,11 @@ spec = do
       categoryName <- forAll genCategoryName
       identityName <- forAll genIdentityName
 
-      let streamName = StreamName.addIdentity categoryName identityName
-       in StreamName.identity streamName === Just identityName
+      let streamName = StreamName.addIdentityToCategory categoryName identityName
+       in StreamName.identityOfStream streamName === Just identityName
 
     it "identity is nothing when not present" . hedgehog $ do
       categoryName <- forAll genCategoryName
 
-      let streamName = StreamName $ StreamName.fromCategoryName categoryName
-       in StreamName.identity streamName === Nothing
+      let streamName = StreamName $ StreamName.categoryNameToText categoryName
+       in StreamName.identityOfStream streamName === Nothing

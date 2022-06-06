@@ -3,6 +3,7 @@ module MessageDb.FunctionsSpec
   )
 where
 
+import qualified MessageDb
 import Control.Monad (replicateM_)
 import Data.Foldable (for_)
 import Data.Maybe (fromMaybe)
@@ -15,8 +16,6 @@ import Generators.StreamName (genCategoryName, genIdentityName, genStreamName)
 import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
-import MessageDb.StreamName (StreamName (..))
-import qualified MessageDb.StreamName as SteamName
 import TempMessageDb (withConnection)
 import Test.Hspec
 import UnliftIO.Exception (try)
@@ -188,7 +187,7 @@ spec =
                 Left (Functions.ExpectedVersionViolation err) -> Simple.sqlErrorMsg err
 
             expectedErrorMessage =
-              let streamNameBS = encodeUtf8 (fromStreamName streamName)
+              let streamNameBS = encodeUtf8 (MessageDb.streamNameToText streamName)
                in "Wrong expected version: 4 (Stream: " <> streamNameBS <> ", Stream Version: 10)"
 
         actualErrorMessage `shouldBe` expectedErrorMessage
@@ -448,7 +447,7 @@ spec =
       it "returns messages when there are messages in the category" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = SteamName.addIdentity categoryName identityName
+        let streamName = MessageDb.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -484,7 +483,7 @@ spec =
       it "returns messages after specified position" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = SteamName.addIdentity categoryName identityName
+        let streamName = MessageDb.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -520,7 +519,7 @@ spec =
       it "returns up to 1000 messages when batch size is not specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = SteamName.addIdentity categoryName identityName
+        let streamName = MessageDb.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -547,7 +546,7 @@ spec =
       it "returns less than or equal to batch size of messages" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = SteamName.addIdentity categoryName identityName
+        let streamName = MessageDb.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -637,7 +636,7 @@ spec =
       it "returns everything when a batch size of unlimited is specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = SteamName.addIdentity categoryName identityName
+        let streamName = MessageDb.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -683,7 +682,7 @@ spec =
 
         replicateM_ 100 $ do
           identityName <- Gen.sample genIdentityName
-          let streamName = SteamName.addIdentity categoryName identityName
+          let streamName = MessageDb.addIdentityToCategory categoryName identityName
           Functions.writeMessage
             connection
             streamName
@@ -725,7 +724,7 @@ spec =
       it "returns messages that match the condition when specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = SteamName.addIdentity categoryName identityName
+        let streamName = MessageDb.addIdentityToCategory categoryName identityName
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
 

@@ -27,10 +27,12 @@ common shared
 
   default-extensions:
     AllowAmbiguousTypes
-    DeriveGeneric
     DeriveFunctor
+    DeriveGeneric
     DerivingVia
     FlexibleContexts
+    FlexibleInstances
+    GADTs
     GeneralizedNewtypeDeriving
     LambdaCase
     NamedFieldPuns
@@ -42,6 +44,7 @@ common shared
     StrictData
     TupleSections
     TypeApplications
+    TypeFamilies
 
   ghc-options:
     -Weverything 
@@ -75,18 +78,16 @@ library
   hs-source-dirs: src
 
   exposed-modules:
+    MessageDb
     MessageDb.Functions
     MessageDb.Handlers
     MessageDb.Message
     MessageDb.Projection
-    MessageDb.Projection.Handlers
     MessageDb.StreamName
     MessageDb.Subscription
     MessageDb.Subscription.FailedMessage
     MessageDb.Subscription.FailureStrategy
-    MessageDb.Subscription.Handlers
     MessageDb.Subscription.PositionStrategy
-    MessageDb.TypedMessage
     MessageDb.Units
 
   build-depends:

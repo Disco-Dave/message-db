@@ -8,6 +8,7 @@ import Data.Function ((&))
 import qualified Data.Pool as Pool
 import qualified Examples.BankAccount as BankAccount
 import GHC.Generics (Generic)
+import qualified MessageDb
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
 import qualified MessageDb.StreamName as StreamName
@@ -48,7 +49,7 @@ computeInterest canFail withConnection message = do
     throwString "Something bad happened"
 
   Just identity <-
-    pure . StreamName.identity $ TypedMessage.streamName message
+    pure . MessageDb.identityOfStream $ TypedMessage.streamName message
 
   void . withConnection $ \connection ->
     Functions.writeMessage
@@ -60,14 +61,14 @@ computeInterest canFail withConnection message = do
       Nothing
 
 
-failureCategory :: StreamName.CategoryName
+failureCategory :: MessageDb.CategoryName
 failureCategory =
-  StreamName.category "failures"
+  MessageDb.categoryName "failures"
 
 
 failureStream :: BankAccount.AccountId -> StreamName.StreamName
 failureStream =
-  StreamName.addIdentity failureCategory . coerce
+  MessageDb.addIdentityToCategory failureCategory . coerce
 
 
 subscribeCommands :: TestApp Subscription
@@ -108,7 +109,7 @@ subscribeFailures = do
   pure $
     subscription
       { Subscription.failureStrategy = FailureStrategy.ignoreFailures
-      , Subscription.categoryName = StreamName.category "failures"
+      , Subscription.categoryName = MessageDb.categoryName "failures"
       , Subscription.handlers = handlers
       }
 

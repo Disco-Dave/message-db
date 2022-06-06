@@ -8,6 +8,7 @@ where
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import qualified MessageDb
 import MessageDb.StreamName (StreamName (..))
 import qualified MessageDb.StreamName as StreamName
 
@@ -31,11 +32,11 @@ genCategoryName =
           [ (30, Gen.alphaNum)
           , (1, pure ':')
           ]
-   in StreamName.category . StreamName.StreamName <$> Gen.text range validCharacters
+   in MessageDb.categoryName <$> Gen.text range validCharacters
 
 
 genStreamName :: Gen StreamName
 genStreamName = do
-  StreamName.addIdentity
+  MessageDb.addIdentityToCategory
     <$> genCategoryName
     <*> genIdentityName

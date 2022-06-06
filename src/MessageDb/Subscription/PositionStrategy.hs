@@ -74,14 +74,14 @@ writeToStream withConnection positionUpdateInterval streamName =
         maybeMessage <- withConnection $ \connection ->
           Functions.getLastStreamMessage connection streamName
 
-        pure $ case fmap Message.typedPayload maybeMessage of
+        pure $ case fmap (Message.parsePayload . Message.messagePayload) maybeMessage of
           Just (Right position) -> position
           _ -> 0
 
       save :: LastPositionSaved -> CurrentPosition -> IO (Maybe PositionSaved)
       save lastPositionSaved currentPosition =
         let interval = fromIntegral $ coerce @_ @Natural positionUpdateInterval
-            difference = Message.fromGlobalPosition $ currentPosition - lastPositionSaved
+            difference = Message.globalPositionToInteger $ currentPosition - lastPositionSaved
          in if difference < interval
               then pure Nothing
               else do

@@ -1,6 +1,7 @@
 -- | Subscribe to a category and react to the messages.
 module MessageDb.Subscription
   ( Subscription (..),
+    SubscriptionHandlers,
     subscribe,
     start,
   )
@@ -17,16 +18,19 @@ import Data.Maybe (fromMaybe)
 import Data.Void (Void)
 import MessageDb.Functions ()
 import qualified MessageDb.Functions as Functions
+import MessageDb.Handlers (Handlers)
+import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
 import MessageDb.StreamName (CategoryName)
 import MessageDb.Subscription.FailureStrategy (FailureStrategy)
 import qualified MessageDb.Subscription.FailureStrategy as FailureStrategy
-import MessageDb.Subscription.Handlers (SubscriptionHandlers)
-import qualified MessageDb.Subscription.Handlers as SubscriptionHandlers
 import MessageDb.Subscription.PositionStrategy (PositionStrategy)
 import qualified MessageDb.Subscription.PositionStrategy as PositionStrategy
 import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
+
+
+type SubscriptionHandlers = Handlers IO (IO ())
 
 
 -- | Defines how to subscribe to a category.
@@ -66,7 +70,7 @@ start :: Functions.WithConnection -> Subscription -> IO Void
 start withConnection Subscription{..} = do
   let sleep :: IO ()
       sleep =
-        threadDelay (fromIntegral (fromMicroseconds tickInterval))
+        threadDelay (fromIntegral (microsecondsToNatural tickInterval))
 
       queryCategory :: Message.GlobalPosition -> IO [Message]
       queryCategory position =

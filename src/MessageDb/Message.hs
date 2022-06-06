@@ -1,29 +1,29 @@
-{- | Messages are the atomic units of information exchanged between services and between applications and services.
- - Read more at: http://docs.eventide-project.org/user-guide/messages-and-message-data
--}
 module MessageDb.Message
   ( MessageId (..),
     newMessageId,
     MessageType (..),
+    messageTypeOf,
     StreamPosition (..),
     GlobalPosition (..),
-    CreatedAtTimestamp (..),
+    CreatedAt (..),
     Payload (..),
-    Metadata (..),
-    Message (..),
-    parsePayload,
     nullPayload,
-    typeOf,
-    typedPayload,
-    parseMetadata,
-    typedMetadata,
+    parsePayload,
+    Metadata (..),
     nullMetadata,
+    parseMetadata,
+    Message (..),
+    ParseMessageFailure (..),
+    ParsedMessage (..),
+    parseMessage,
   )
 where
 
+import Control.Exception (Exception)
 import Data.Aeson ((.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
+import qualified Data.ByteString.Lazy.Char8 as Char8
 import Data.Coerce (coerce)
 import Data.Proxy (Proxy (..))
 import Data.String (IsString)
@@ -33,163 +33,11 @@ import Data.Time (UTCTime)
 import Data.Typeable (Typeable, typeRep)
 import Data.UUID (UUID)
 import qualified Data.UUID.V4 as UUID.V4
-import MessageDb.StreamName (StreamName (..))
+import MessageDb.StreamName (StreamName)
 import Numeric.Natural (Natural)
 
 
--- | Unique id of a message. Most be unique across the entire event store.
-newtype MessageId = MessageId
-  { fromMessageId :: UUID
-  }
-  deriving (Eq, Ord)
-  deriving (Show) via UUID
-
-
--- | Create a new unique message id.
-newMessageId :: IO MessageId
-newMessageId =
-  fmap MessageId UUID.V4.nextRandom
-
-
-instance Aeson.ToJSON MessageId where
-  toJSON = Aeson.toJSON . fromMessageId
-  toEncoding = Aeson.toEncoding . fromMessageId
-
-
-instance Aeson.FromJSON MessageId where
-  parseJSON = fmap MessageId . Aeson.parseJSON
-
-
--- | The type of a message. You can use this later to determine what kind of event or command a message is.
-newtype MessageType = MessageType
-  { fromMessageType :: Text
-  }
-  deriving (Eq, Ord, IsString)
-  deriving (Show) via Text
-
-
--- | Converts a type's name to a 'MessageType'. For example 'typeOf @Bool' will be 'MessageType "Bool"'.
-typeOf :: forall payload. Typeable payload => MessageType
-typeOf =
-  let eventName = Text.pack . show . typeRep $ Proxy @payload
-   in MessageType eventName
-
-
-instance Aeson.ToJSON MessageType where
-  toJSON = Aeson.toJSON . fromMessageType
-  toEncoding = Aeson.toEncoding . fromMessageType
-
-
-instance Aeson.FromJSON MessageType where
-  parseJSON = fmap MessageType . Aeson.parseJSON
-
-
--- | Position within a stream. This starts at 0 and has no gaps.
-newtype StreamPosition = StreamPosition
-  { fromStreamPosition :: Natural
-  }
-  deriving (Eq, Ord, Num, Real, Enum, Integral)
-  deriving (Show) via Natural
-
-
-instance Aeson.ToJSON StreamPosition where
-  toJSON = Aeson.toJSON . fromStreamPosition
-  toEncoding = Aeson.toEncoding . fromStreamPosition
-
-
-instance Aeson.FromJSON StreamPosition where
-  parseJSON = fmap StreamPosition . Aeson.parseJSON
-
-
--- | Primary key. The ordinal position of the message in the entire message store. Global position may have gaps.
-newtype GlobalPosition = GlobalPosition
-  { fromGlobalPosition :: Integer
-  }
-  deriving (Eq, Ord, Num, Real, Enum, Integral)
-  deriving (Show) via Integer
-
-
-instance Aeson.ToJSON GlobalPosition where
-  toJSON = Aeson.toJSON . fromGlobalPosition
-  toEncoding = Aeson.toEncoding . fromGlobalPosition
-
-
-instance Aeson.FromJSON GlobalPosition where
-  parseJSON = fmap GlobalPosition . Aeson.parseJSON
-
-
--- | Message payload
-newtype Payload = Payload
-  { fromPayload :: Aeson.Value
-  }
-  deriving (Eq)
-  deriving (Show) via Aeson.Value
-
-
-nullPayload :: Payload
-nullPayload =
-  Payload Aeson.Null
-
-
-instance Aeson.ToJSON Payload where
-  toJSON = Aeson.toJSON . fromPayload
-  toEncoding = Aeson.toEncoding . fromPayload
-
-
-instance Aeson.FromJSON Payload where
-  parseJSON = fmap Payload . Aeson.parseJSON
-
-
--- | Message metadata
-newtype Metadata = Metadata
-  { fromMetadata :: Aeson.Value
-  }
-  deriving (Eq)
-  deriving (Show) via Aeson.Value
-
-
-nullMetadata :: Metadata
-nullMetadata =
-  Metadata Aeson.Null
-
-
-instance Aeson.ToJSON Metadata where
-  toJSON = Aeson.toJSON . fromMetadata
-  toEncoding = Aeson.toEncoding . fromMetadata
-
-
-instance Aeson.FromJSON Metadata where
-  parseJSON = fmap Metadata . Aeson.parseJSON
-
-
--- | Timestamp when the message was written.
-newtype CreatedAtTimestamp = CreatedAtTimestamp
-  { fromCreatedAtTimestamp :: UTCTime
-  }
-  deriving (Eq, Ord)
-  deriving (Show) via UTCTime
-
-
-instance Aeson.ToJSON CreatedAtTimestamp where
-  toJSON = Aeson.toJSON . fromCreatedAtTimestamp
-  toEncoding = Aeson.toEncoding . fromCreatedAtTimestamp
-
-
-instance Aeson.FromJSON CreatedAtTimestamp where
-  parseJSON = fmap CreatedAtTimestamp . Aeson.parseJSON
-
-
-data Message = Message
-  { messageId :: MessageId
-  , streamName :: StreamName
-  , messageType :: MessageType
-  , streamPosition :: StreamPosition
-  , globalPosition :: GlobalPosition
-  , payload :: Payload
-  , metadata :: Metadata
-  , createdAtTimestamp :: CreatedAtTimestamp
-  }
-  deriving (Show, Eq)
+-- * JSON Helpers
 
 
 parseJson :: Aeson.FromJSON value => Aeson.Value -> Either String value
@@ -198,36 +46,200 @@ parseJson column =
    in AesonTypes.parseEither Aeson.parseJSON json
 
 
+showValue :: Aeson.Value -> String
+showValue =
+  Char8.unpack . Aeson.encode
+
+
+-- * Message Id
+
+
+-- | Unique id of a message. Most be unique across the entire event store.
+newtype MessageId = MessageId
+  { messageIdToUUID :: UUID
+  }
+  deriving
+    ( Show
+    , Eq
+    , Ord
+    , Aeson.FromJSON
+    , Aeson.ToJSON
+    )
+    via UUID
+
+
+-- | Create a new unique message id.
+newMessageId :: IO MessageId
+newMessageId =
+  fmap MessageId UUID.V4.nextRandom
+
+
+-- * Message Type
+
+
+-- | The type of a message. You can use this later to determine what kind of event or command a message is.
+newtype MessageType = MessageType
+  { messageTypeToText :: Text
+  }
+  deriving
+    ( Eq
+    , Ord
+    , Show
+    , IsString
+    , Aeson.ToJSON
+    , Aeson.FromJSON
+    )
+    via Text
+
+
+-- | Converts a type's name to a 'MessageType'. For example 'typeOf @Bool' will be 'MessageType "Bool"'.
+messageTypeOf :: forall payload. Typeable payload => MessageType
+messageTypeOf =
+  let eventName = Text.pack . show . typeRep $ Proxy @payload
+   in MessageType eventName
+
+
+-- * Stream Position
+
+
+-- | Position within a stream. This starts at 0 and has no gaps.
+newtype StreamPosition = StreamPosition
+  { streamPositionToNatural :: Natural
+  }
+  deriving
+    ( Show
+    , Eq
+    , Ord
+    , Num
+    , Real
+    , Enum
+    , Integral
+    , Aeson.ToJSON
+    , Aeson.FromJSON
+    )
+    via Natural
+
+
+-- * Global Position
+
+
+-- | Primary key. The ordinal position of the message in the entire message store. Global position may have gaps.
+newtype GlobalPosition = GlobalPosition
+  { globalPositionToInteger :: Integer
+  }
+  deriving
+    ( Show
+    , Eq
+    , Ord
+    , Num
+    , Real
+    , Enum
+    , Integral
+    , Aeson.ToJSON
+    , Aeson.FromJSON
+    )
+    via Integer
+
+
+-- * Created at Timestamp
+
+
+-- | Timestamp when the message was written.
+newtype CreatedAt = CreatedAt
+  { createdAtToUTCTime :: UTCTime
+  }
+  deriving
+    ( Show
+    , Eq
+    , Ord
+    , Aeson.ToJSON
+    , Aeson.FromJSON
+    )
+    via UTCTime
+
+
+-- * Payload
+
+
+newtype Payload = Payload
+  { payloadToValue :: Aeson.Value
+  }
+  deriving
+    ( Eq
+    , Aeson.ToJSON
+    , Aeson.FromJSON
+    )
+    via Aeson.Value
+
+
+instance Show Payload where
+  show = showValue . payloadToValue
+
+
+nullPayload :: Payload
+nullPayload =
+  Payload Aeson.Null
+
+
 parsePayload :: Aeson.FromJSON value => Payload -> Either String value
 parsePayload =
-  parseJson . coerce
+  parseJson . payloadToValue
 
 
-typedPayload :: Aeson.FromJSON payload => Message -> Either String payload
-typedPayload Message{payload} =
-  parsePayload payload
+-- * Metadata
+
+
+newtype Metadata = Metadata
+  { metadataToValue :: Aeson.Value
+  }
+  deriving
+    ( Eq
+    , Aeson.ToJSON
+    , Aeson.FromJSON
+    )
+    via Aeson.Value
+
+
+instance Show Metadata where
+  show = showValue . metadataToValue
+
+
+nullMetadata :: Metadata
+nullMetadata =
+  Metadata Aeson.Null
 
 
 parseMetadata :: Aeson.FromJSON value => Metadata -> Either String value
 parseMetadata =
-  parseJson . coerce
+  parseJson . metadataToValue
 
 
-typedMetadata :: Aeson.FromJSON metadata => Message -> Either String metadata
-typedMetadata Message{metadata} =
-  parseMetadata metadata
+-- * Message
+
+
+data Message = Message
+  { messageId :: MessageId
+  , messageStream :: StreamName
+  , messageType :: MessageType
+  , messageStreamPosition :: StreamPosition
+  , messageGlobalPosition :: GlobalPosition
+  , messageCreatedAt :: CreatedAt
+  , messagePayload :: Payload
+  , messageMetadata :: Metadata
+  }
+  deriving (Show, Eq)
 
 
 toKeyValues :: Aeson.KeyValue keyValue => Message -> [keyValue]
 toKeyValues Message{..} =
   [ "id" .= messageId
-  , "streamName" .= streamName
+  , "streamName" .= messageStream
   , "type" .= messageType
-  , "streamPosition" .= streamPosition
-  , "globalPosition" .= globalPosition
-  , "payload" .= payload
-  , "metadata" .= metadata
-  , "createdAtTimestamp" .= createdAtTimestamp
+  , "streamPosition" .= messageStreamPosition
+  , "globalPosition" .= messageGlobalPosition
+  , "createdAt" .= messageCreatedAt
+  , "payload" .= messagePayload
+  , "metadata" .= messageMetadata
   ]
 
 
@@ -239,11 +251,53 @@ instance Aeson.ToJSON Message where
 instance Aeson.FromJSON Message where
   parseJSON = Aeson.withObject "Message" $ \object -> do
     messageId <- object .: "id"
-    streamName <- object .: "streamName"
+    messageStream <- object .: "streamName"
     messageType <- object .: "type"
-    streamPosition <- object .: "streamPosition"
-    globalPosition <- object .: "globalPosition"
-    payload <- object .:? "payload" .!= nullPayload
-    metadata <- object .:? "metadata" .!= nullMetadata
-    createdAtTimestamp <- object .: "createdAtTimestamp"
-    pure Message{..}
+    messageStreamPosition <- object .: "streamPosition"
+    messageGlobalPosition <- object .: "globalPosition"
+    messageCreatedAt <- object .: "createdAt"
+    messagePayload <- object .:? "payload" .!= nullPayload
+    messageMetadata <- object .:? "metadata" .!= nullMetadata
+    pure
+      Message
+        { messageId = messageId
+        , messageStream = messageStream
+        , messageType = messageType
+        , messageStreamPosition = messageStreamPosition
+        , messageGlobalPosition = messageGlobalPosition
+        , messageCreatedAt = messageCreatedAt
+        , messagePayload = messagePayload
+        , messageMetadata = messageMetadata
+        }
+
+
+-- * Parsed Message
+
+
+data ParseMessageFailure = ParseMessageFailure
+  { failedPayloadReason :: Maybe String
+  , failedMetadataReason :: Maybe String
+  }
+  deriving (Show, Eq)
+instance Exception ParseMessageFailure
+
+
+data ParsedMessage payload metadata = ParsedMessage
+  { parsedPayload :: payload
+  , parsedMetadata :: metadata
+  }
+  deriving (Show, Eq)
+
+
+parseMessage :: (Aeson.FromJSON payload, Aeson.FromJSON metadata) => Message -> Either ParseMessageFailure (ParsedMessage payload metadata)
+parseMessage Message{messagePayload, messageMetadata} =
+  case (parsePayload messagePayload, parseMetadata messageMetadata) of
+    (Right parsedPayload, Right parsedMetadata) ->
+      Right $ ParsedMessage parsedPayload parsedMetadata
+    (payloadResult, metadataResult) ->
+      let toMaybe = either Just (const Nothing)
+       in Left $
+            ParseMessageFailure
+              { failedPayloadReason = toMaybe payloadResult
+              , failedMetadataReason = toMaybe metadataResult
+              }

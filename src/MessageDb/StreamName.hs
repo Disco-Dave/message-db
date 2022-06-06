@@ -11,12 +11,13 @@
 module MessageDb.StreamName
   ( StreamName (..),
     CategoryName,
-    category,
-    fromCategoryName,
+    categoryOfStream,
+    categoryNameToText,
+    categoryName,
     IdentityName (..),
-    identity,
-    addIdentity,
-    addMaybeIdentity,
+    identityOfStream,
+    addIdentityToCategory,
+    addMaybeIdentityToCategory,
   )
 where
 
@@ -30,15 +31,15 @@ import Prelude hiding (all)
 
 -- | Name of a stream.
 newtype StreamName = StreamName
-  { fromStreamName :: Text
+  { streamNameToText :: Text
   }
   deriving (Eq, Ord, IsString, Semigroup)
   deriving (Show) via Text
 
 
 instance Aeson.ToJSON StreamName where
-  toJSON = Aeson.toJSON . fromStreamName
-  toEncoding = Aeson.toEncoding . fromStreamName
+  toJSON = Aeson.toJSON . streamNameToText
+  toEncoding = Aeson.toEncoding . streamNameToText
 
 
 instance Aeson.FromJSON StreamName where
@@ -58,24 +59,29 @@ newtype CategoryName = CategoryName Text
 
 
 -- | Converts from a 'CategoryName' to a nromal 'Text'.
-fromCategoryName :: CategoryName -> Text
-fromCategoryName (CategoryName text) =
+categoryNameToText :: CategoryName -> Text
+categoryNameToText (CategoryName text) =
   text
 
 
 {- | Gets the category of a stream.
  For example for "account-123" it would return "account".
 -}
-category :: StreamName -> CategoryName
-category (StreamName text) =
+categoryOfStream :: StreamName -> CategoryName
+categoryOfStream (StreamName text) =
   case Text.split (== separator) text of
     (name : _) -> CategoryName name
     _ -> CategoryName "" -- 'Text.split' never returns an empty list
 
 
+categoryName :: Text -> CategoryName
+categoryName =
+  categoryOfStream . StreamName
+
+
 instance Aeson.ToJSON CategoryName where
-  toJSON = Aeson.toJSON . fromCategoryName
-  toEncoding = Aeson.toEncoding . fromCategoryName
+  toJSON = Aeson.toJSON . categoryNameToText
+  toEncoding = Aeson.toEncoding . categoryNameToText
 
 
 instance Aeson.FromJSON CategoryName where
@@ -83,7 +89,9 @@ instance Aeson.FromJSON CategoryName where
 
 
 -- | The identifier part of a stream name. Anything after the first hypen (-).
-newtype IdentityName = IdentityName {fromIdentityName :: Text}
+newtype IdentityName = IdentityName
+  { identityNameToText :: Text
+  }
   deriving (Eq, Ord)
   deriving (Show) via Text
 
@@ -92,8 +100,8 @@ newtype IdentityName = IdentityName {fromIdentityName :: Text}
  For example "account-ed3b4af7-b4a0-499e-8a16-a09763811274" would return Just "ed3b4af7-b4a0-499e-8a16-a09763811274",
  and "account" would return Nothing.
 -}
-identity :: StreamName -> Maybe IdentityName
-identity (StreamName text) =
+identityOfStream :: StreamName -> Maybe IdentityName
+identityOfStream (StreamName text) =
   let separatorText = Text.pack [separator]
       value = Text.intercalate separatorText . drop 1 $ Text.split (== separator) text
    in if Text.null value
@@ -104,24 +112,24 @@ identity (StreamName text) =
 {- | Add an identifier to a 'CategoryName'.
  For example category "account" and identity "123" would return "account-123".
 -}
-addIdentity :: CategoryName -> IdentityName -> StreamName
-addIdentity (CategoryName categoryName) identityName =
-  StreamName $ categoryName <> Text.singleton separator <> fromIdentityName identityName
+addIdentityToCategory :: CategoryName -> IdentityName -> StreamName
+addIdentityToCategory (CategoryName categoryName) identityName =
+  StreamName $ categoryName <> Text.singleton separator <> identityNameToText identityName
 
 
 -- | Add a maybe identifier, allowing you to add an identifier to the stream name if it is Just.
-addMaybeIdentity :: CategoryName -> Maybe IdentityName -> StreamName
-addMaybeIdentity categoryName maybeIdentityName =
+addMaybeIdentityToCategory :: CategoryName -> Maybe IdentityName -> StreamName
+addMaybeIdentityToCategory categoryName maybeIdentityName =
   case maybeIdentityName of
     Nothing ->
       coerce categoryName
     Just identityName ->
-      addIdentity categoryName identityName
+      addIdentityToCategory categoryName identityName
 
 
 instance Aeson.ToJSON IdentityName where
-  toJSON = Aeson.toJSON . fromIdentityName
-  toEncoding = Aeson.toEncoding . fromIdentityName
+  toJSON = Aeson.toJSON . identityNameToText
+  toEncoding = Aeson.toEncoding . identityNameToText
 
 
 instance Aeson.FromJSON IdentityName where
