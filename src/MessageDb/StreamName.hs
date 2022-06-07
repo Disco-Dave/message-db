@@ -113,18 +113,18 @@ identityOfStream (StreamName text) =
  For example category "account" and identity "123" would return "account-123".
 -}
 addIdentityToCategory :: CategoryName -> IdentityName -> StreamName
-addIdentityToCategory (CategoryName categoryName) identityName =
-  StreamName $ categoryName <> Text.singleton separator <> identityNameToText identityName
+addIdentityToCategory (CategoryName categoryText) identityName =
+  StreamName $ categoryText <> Text.singleton separator <> identityNameToText identityName
 
 
 -- | Add a maybe identifier, allowing you to add an identifier to the stream name if it is Just.
 addMaybeIdentityToCategory :: CategoryName -> Maybe IdentityName -> StreamName
-addMaybeIdentityToCategory categoryName maybeIdentityName =
+addMaybeIdentityToCategory categoryText maybeIdentityName =
   case maybeIdentityName of
     Nothing ->
-      coerce categoryName
+      coerce categoryText
     Just identityName ->
-      addIdentityToCategory categoryName identityName
+      addIdentityToCategory categoryText identityName
 
 
 instance Aeson.ToJSON IdentityName where

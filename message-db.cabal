@@ -78,7 +78,6 @@ library
   hs-source-dirs: src
 
   exposed-modules:
-    MessageDb
     MessageDb.Functions
     MessageDb.Handlers
     MessageDb.Message
