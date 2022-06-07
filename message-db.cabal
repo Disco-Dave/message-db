@@ -80,6 +80,7 @@ library
   exposed-modules:
     MessageDb.Functions
     MessageDb.Handlers
+    MessageDb.Handlers2
     MessageDb.Message
     MessageDb.Projection
     MessageDb.StreamName
@@ -93,6 +94,7 @@ library
     , aeson >=1.5 && <2.1
     , bytestring >=0.10 && <0.12
     , containers >=0.6 && <0.7
+    , mtl >= 2.2 && <2.4
     , postgresql-simple >=0.6 && <0.7
     , safe-exceptions >=0.1 && <0.2
     , text >=1.2 && <2.1
@@ -138,7 +140,7 @@ test-suite message-db-test
     , hspec >=2.7 && <2.11
     , hspec-hedgehog >=0.0 && <0.1
     , message-db
-    , mtl >= 2.2 && <2.4
+    , mtl
     , postgres-options >=0.2 && <0.3
     , postgresql-simple
     , resource-pool >=0.2 && <0.3

@@ -1,9 +1,13 @@
 module MessageDb.Handlers
   ( HandleError (..),
     Handler,
+    ProjectionHandler,
+    SubscriptionHandler,
     projectionHandler,
     subscriptionHandler,
     Handlers,
+    ProjectionHandlers,
+    SubscriptionHandlers,
     emptyHandlers,
     listToHandlers,
     addHandler,
@@ -33,13 +37,28 @@ data HandleError
 instance Exception HandleError
 
 
+type Handler' output = Message -> output
+
+
+type ProjectionHandler' state = Handler' (state -> state)
+
+
+type SubscriptionHandler' = Handler' (IO ())
+
+
 type Handler state output = Message -> state -> Either HandleError output
+
+
+type ProjectionHandler state = Handler state state
+
+
+type SubscriptionHandler = Handler () (IO ())
 
 
 projectionHandler ::
   (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
   (Message -> payload -> metadata -> state -> state) ->
-  Handler state state
+  ProjectionHandler state
 projectionHandler original message state = do
   Message.ParsedMessage{..} <- first HandlerParseFailure $ Message.parseMessage message
   pure $ original message parsedPayload parsedMetadata state
@@ -48,13 +67,19 @@ projectionHandler original message state = do
 subscriptionHandler ::
   (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
   (Message -> payload -> metadata -> IO ()) ->
-  Handler () (IO ())
+  SubscriptionHandler
 subscriptionHandler original message _ = do
   Message.ParsedMessage{..} <- first HandlerParseFailure $ Message.parseMessage message
   pure $ original message parsedPayload parsedMetadata
 
 
 type Handlers state output = Map Message.MessageType (Handler state output)
+
+
+type ProjectionHandlers state = Handlers state state
+
+
+type SubscriptionHandlers = Handlers () (IO ())
 
 
 emptyHandlers :: Handlers status output
@@ -76,8 +101,8 @@ addProjectionHandler ::
   (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
   Message.MessageType ->
   (Message -> payload -> metadata -> state -> state) ->
-  Handlers state state ->
-  Handlers state state
+  ProjectionHandlers state ->
+  ProjectionHandlers state
 addProjectionHandler messageType handler =
   addHandler messageType (projectionHandler handler)
 
@@ -86,8 +111,8 @@ addSubscriptionHandler ::
   (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
   Message.MessageType ->
   (Message -> payload -> metadata -> IO ()) ->
-  Handlers () (IO ()) ->
-  Handlers () (IO ())
+  SubscriptionHandlers ->
+  SubscriptionHandlers
 addSubscriptionHandler messageType handler =
   addHandler messageType (subscriptionHandler handler)
 
