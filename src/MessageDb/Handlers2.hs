@@ -25,7 +25,6 @@ where
 
 import Control.Exception (Exception)
 import Control.Monad.Except (Except, MonadError (throwError), runExcept)
-import Control.Monad.Identity (Identity (runIdentity))
 import Control.Monad.Reader (MonadReader (ask), ReaderT (..))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
