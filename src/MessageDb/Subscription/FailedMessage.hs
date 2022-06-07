@@ -8,7 +8,7 @@ where
 
 import Data.Aeson (KeyValue ((.=)), (.:))
 import qualified Data.Aeson as Aeson
-import qualified Data.Map.Strict as Map
+import Data.Bifunctor (first)
 import Data.Text (Text)
 import MessageDb.Handlers (Handlers)
 import qualified MessageDb.Handlers as Handlers
@@ -53,7 +53,11 @@ instance Aeson.FromJSON FailedMessage where
 -}
 handleFailures :: Handlers state output -> Handlers state output
 handleFailures originalHandlers =
-  let failedMessageHandle failedMessage state =
-        let originalMessage = message failedMessage
+  let failedMessageHandle failedMessage state = do
+        Message.ParsedMessage{..} <-
+          first Handlers.HandlerParseFailure $
+            Message.parseMessage @FailedMessage @Message.Metadata failedMessage
+
+        let originalMessage = message parsedPayload
          in Handlers.handle originalHandlers originalMessage state
    in Handlers.addHandler messageType failedMessageHandle Handlers.emptyHandlers

@@ -71,7 +71,7 @@ writeToCategory shouldKeep withConnection categoryName =
   let logFailureToCategory message reason =
         when (shouldKeep reason) $ do
           identity <-
-            case StreamName.identityOfStream (Message.streamName message) of
+            case StreamName.identityOfStream (Message.messageStream message) of
               Nothing -> fmap (StreamName.IdentityName . UUID.toText) UUID.V4.nextRandom
               Just value -> pure value
 
@@ -84,7 +84,7 @@ writeToCategory shouldKeep withConnection categoryName =
                   , reason = Text.pack $ show reason
                   }
 
-              metadata = Message.metadata message
+              metadata = Message.messageMetadata message
 
           void . withConnection $ \connection ->
             Functions.writeMessage

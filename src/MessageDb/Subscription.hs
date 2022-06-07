@@ -30,7 +30,7 @@ import qualified MessageDb.Subscription.PositionStrategy as PositionStrategy
 import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
 
 
-type SubscriptionHandlers = Handlers IO (IO ())
+type SubscriptionHandlers = Handlers () (IO ())
 
 
 -- | Defines how to subscribe to a category.
@@ -58,7 +58,7 @@ subscribe categoryName =
     , logMessages = \_ -> pure ()
     , failureStrategy = FailureStrategy.ignoreFailures
     , positionStrategy = PositionStrategy.dontSave
-    , handlers = SubscriptionHandlers.empty
+    , handlers = Handlers.emptyHandlers
     , consumerGroup = Nothing
     , condition = Nothing
     , correlation = Nothing
@@ -87,7 +87,7 @@ start withConnection Subscription{..} = do
       handle :: Message -> IO ()
       handle message = do
         result <-
-          case SubscriptionHandlers.handle handlers message of
+          case Handlers.handle handlers message () of
             Left err ->
               pure . Left $ FailureStrategy.HandleFailure err
             Right effect ->
@@ -108,7 +108,7 @@ start withConnection Subscription{..} = do
             traverse_ handle nonEmptyMessages
             pure
               ( NumberOfMessages . fromIntegral $ NonEmpty.length nonEmptyMessages
-              , Just . Message.globalPosition $ NonEmpty.last nonEmptyMessages
+              , Just . Message.messageGlobalPosition $ NonEmpty.last nonEmptyMessages
               )
 
       poll :: Message.GlobalPosition -> Message.GlobalPosition -> IO Void
