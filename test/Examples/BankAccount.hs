@@ -34,14 +34,13 @@ module Examples.BankAccount
     close,
     deposit,
     withdraw,
-    subscribe,
-    send,
+    --subscribe,
+    --send,
     markAsProcessed,
-    fetch,
+    --fetch,
   )
 where
 
-import qualified MessageDb
 import Control.Monad (unless, void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadReader (ask))
@@ -59,18 +58,16 @@ import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID.V4
 import GHC.Generics (Generic)
 import qualified MessageDb.Functions as Functions
+import qualified MessageDb.Handlers as Handlers
+import MessageDb.Message (Message (..))
 import qualified MessageDb.Message as Message
 import MessageDb.Projection (Projected, Projection (Projection, handlers))
 import qualified MessageDb.Projection as Projection
-import qualified MessageDb.Projection.Handlers as ProjectionHandlers
 import MessageDb.StreamName (CategoryName, StreamName)
 import qualified MessageDb.StreamName as StreamName
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
 import MessageDb.Subscription.FailureStrategy (FailureStrategy (..))
-import qualified MessageDb.Subscription.Handlers as SubscriptionHandlers
-import MessageDb.TypedMessage (TypedMessage (TypedMessage))
-import qualified MessageDb.TypedMessage as TypedMessage
 import TestApp (TestApp, TestAppData (TestAppData, connectionPool))
 import qualified TestApp
 import UnliftIO (MonadUnliftIO (withRunInIO), throwIO)
@@ -121,25 +118,25 @@ newAccountId = do
 -- | Category of bank account commands.
 commandCategory :: CategoryName
 commandCategory =
-  MessageDb.categoryOfStream "bankAccount:command"
+  StreamName.categoryOfStream "bankAccount:command"
 
 
 -- | Stream that you write commands for a specific bank account to.
 commandStream :: AccountId -> StreamName
 commandStream =
-  MessageDb.addIdentityToCategory commandCategory . coerce
+  StreamName.addIdentityToCategory commandCategory . coerce
 
 
 -- | Category of bank account events.
 entityCategory :: CategoryName
 entityCategory =
-  MessageDb.categoryOfStream "bankAccount"
+  StreamName.categoryOfStream "bankAccount"
 
 
 -- | The source of truth for a specific bank account. This is a stream of events from processing commands.
 entityStream :: AccountId -> StreamName
 entityStream =
-  MessageDb.addIdentityToCategory entityCategory . coerce
+  StreamName.addIdentityToCategory entityCategory . coerce
 
 
 -- | The minimum balance needed to keep an account open.
@@ -173,8 +170,8 @@ addCommandPosition metadata positions =
     Right AccountMetadata{createdFrom} -> Set.insert createdFrom positions
 
 
-markAsProcessed :: TypedMessage payload Message.Metadata -> BankAccount -> BankAccount
-markAsProcessed TypedMessage{metadata} bankAccount =
+markAsProcessed :: Message.Metadata -> BankAccount -> BankAccount
+markAsProcessed metadata bankAccount =
   bankAccount
     { commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
@@ -242,12 +239,11 @@ open payload bankAccount =
 
 
 -- | Record the 'Opened' event in our 'BankAccount' 'projection'.
-opened :: TypedMessage Opened Message.Metadata -> BankAccount -> BankAccount
-opened TypedMessage{payload, metadata} bankAccount =
+opened :: Opened -> BankAccount -> BankAccount
+opened payload bankAccount =
   bankAccount
     { isOpened = True
     , balance = openedBalance payload
-    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
@@ -309,11 +305,10 @@ close _ bankAccount =
 
 
 -- | Record the Closed event in our 'BankAccount' 'projection'.
-closed :: TypedMessage Closed Message.Metadata -> BankAccount -> BankAccount
-closed TypedMessage{metadata} bankAccount =
+closed :: Closed -> BankAccount -> BankAccount
+closed _ bankAccount =
   bankAccount
     { isOpened = False
-    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
@@ -375,11 +370,10 @@ deposit payload bankAccount =
 
 
 -- | Record 'Deposited' event in our 'BankAccount' 'projection'.
-deposited :: TypedMessage Deposited Message.Metadata -> BankAccount -> BankAccount
-deposited TypedMessage{payload, metadata} bankAccount =
+deposited :: Deposited -> BankAccount -> BankAccount
+deposited payload bankAccount =
   bankAccount
     { balance = balance bankAccount + depositedAmount payload
-    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
@@ -420,6 +414,7 @@ instance Aeson.FromJSON WithdrawRejectedReason
 data WithdrawRejected = WithdrawRejected
   { rejectedWithdrawAmount :: Money
   , withdrawRejectedReason :: WithdrawRejectedReason
+  , rejectedAt :: UTCTime
   }
   deriving (Show, Eq, Generic)
 
@@ -429,13 +424,14 @@ instance Aeson.FromJSON WithdrawRejected
 
 
 -- | Handle the request to withdraw money.
-withdraw :: Withdraw -> BankAccount -> Either WithdrawRejected Withdrawn
-withdraw payload bankAccount =
+withdraw :: Withdraw -> BankAccount -> UTCTime -> Either WithdrawRejected Withdrawn
+withdraw payload bankAccount now =
   let reject reason =
         Left
           WithdrawRejected
             { rejectedWithdrawAmount = withdrawAmount payload
             , withdrawRejectedReason = reason
+            , rejectedAt = now
             }
    in if isOpened bankAccount
         then
@@ -448,44 +444,47 @@ withdraw payload bankAccount =
 
 
 -- | Record the 'Withdrawn' event in our 'BankAccount' 'projection'.
-withdrawn :: TypedMessage Withdrawn Message.Metadata -> BankAccount -> BankAccount
-withdrawn TypedMessage{payload, metadata} bankAccount =
+withdrawn :: Withdrawn -> BankAccount -> BankAccount
+withdrawn payload bankAccount =
   bankAccount
     { balance = balance bankAccount - withdrawnAmount payload
-    , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
     }
 
 
 -- | Record a 'WithdrawRejected' event in our 'BankAccount' 'projection'. This is where we find 'Overdraft's.
-withdrawRejected :: TypedMessage WithdrawRejected Message.Metadata -> BankAccount -> BankAccount
-withdrawRejected TypedMessage{payload, createdAtTimestamp, metadata} bankAccount =
+withdrawRejected :: WithdrawRejected -> BankAccount -> BankAccount
+withdrawRejected payload bankAccount =
   let overdraft =
         Overdraft
           { overdraftAmount = rejectedWithdrawAmount payload
-          , overdraftTime = coerce createdAtTimestamp
+          , overdraftTime = rejectedAt payload
           }
    in bankAccount
         { overdrafts =
             if withdrawRejectedReason payload == InsufficientFunds
               then overdraft : overdrafts bankAccount
               else overdrafts bankAccount
-        , commandsProcessed = addCommandPosition metadata (commandsProcessed bankAccount)
         }
 
 
 -- | Project all messages in the 'entityStream' and aggregate the state into a 'BankAccount'.
 projection :: Projection BankAccount
 projection =
-  let handlers =
-        ProjectionHandlers.empty
-          & ProjectionHandlers.attach (Message.typeOf @Opened) opened
-          & ProjectionHandlers.attach @Message.Payload (Message.typeOf @OpenRejected) markAsProcessed
-          & ProjectionHandlers.attach (Message.typeOf @Closed) closed
-          & ProjectionHandlers.attach @Message.Payload (Message.typeOf @CloseRejected) markAsProcessed
-          & ProjectionHandlers.attach (Message.typeOf @Deposited) deposited
-          & ProjectionHandlers.attach @Message.Payload (Message.typeOf @DepositRejected) markAsProcessed
-          & ProjectionHandlers.attach (Message.typeOf @Withdrawn) withdrawn
-          & ProjectionHandlers.attach (Message.typeOf @WithdrawRejected) withdrawRejected
+  let markAsProcessedHandler =
+        Handlers.projectionHandler @Message.Payload $ \_ _ -> markAsProcessed
+      toHandler f =
+        markAsProcessedHandler <> (Handlers.projectionHandler @_ @Message.Metadata $ \_ payload _ -> f payload)
+      handlers =
+        Handlers.listToHandlers
+          [ (Message.messageTypeOf @Open, toHandler opened)
+          , (Message.messageTypeOf @OpenRejected, markAsProcessedHandler)
+          , (Message.messageTypeOf @Closed, toHandler closed)
+          , (Message.messageTypeOf @CloseRejected, markAsProcessedHandler)
+          , (Message.messageTypeOf @Deposited, toHandler deposited)
+          , (Message.messageTypeOf @DepositRejected, markAsProcessedHandler)
+          , (Message.messageTypeOf @Withdrawn, toHandler withdrawn)
+          , (Message.messageTypeOf @WithdrawRejected, toHandler withdrawRejected)
+          ]
    in Projection
         { handlers = handlers
         , initial =
@@ -519,7 +518,7 @@ send accountId command = do
     Functions.writeMessage
       connection
       (commandStream accountId)
-      (Message.typeOf @command)
+      (Message.messageTypeOf @command)
       command
       (Just Message.nullMetadata)
       Nothing
@@ -534,9 +533,11 @@ handleCommand ::
   , Aeson.ToJSON success
   ) =>
   (command -> BankAccount -> Either failure success) ->
-  TypedMessage command Message.Metadata ->
+  Message ->
+  command ->
+  Message.Metadata ->
   TestApp ()
-handleCommand processCommand TypedMessage{payload, globalPosition, streamName} = do
+handleCommand processCommand Message{globalPosition, streamName} command _ = do
   Just accountId <- pure . coerce $ MessageDb.identityOfStream streamName
 
   let targetStream = entityStream accountId

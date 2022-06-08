@@ -80,10 +80,10 @@ reverseUnprocessed projected =
 project' :: Projection state -> NonEmpty Message -> Projected state
 project' Projection{initial, handlers} messages =
   let applyHandler message projected@Projected{state, unprocessed} =
-        case Handlers.handle handlers message of
-          Right updateState ->
+        case Handlers.projectionHandle handlers message state of
+          Right updatedState ->
             projected
-              { state = updateState state
+              { state = updatedState
               , version = Functions.DoesExist $ Message.messageStreamPosition message
               }
           Left newError ->

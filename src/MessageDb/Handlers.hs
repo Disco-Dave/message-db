@@ -27,8 +27,11 @@ import Control.Exception (Exception)
 import Control.Monad.Except (Except, MonadError (throwError), runExcept)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (..))
 import qualified Data.Aeson as Aeson
+import Data.Foldable (foldl')
+import Data.List.NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Semigroup
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
 
@@ -53,6 +56,17 @@ newtype Handler output = Handler
     , MonadReader Message
     , MonadError HandleError
     )
+
+
+instance Semigroup output => Semigroup (Handler output) where
+  left <> right = do
+    leftOutput <- left
+    rightOutput <- right
+    pure $ leftOutput <> rightOutput
+
+
+instance Monoid output => Monoid (Handler output) where
+  mempty = pure mempty
 
 
 runHandler :: Handler output -> Message -> Either HandleError output
@@ -111,8 +125,16 @@ handle handlers message =
       runHandler handler message
 
 
+combineHandlers :: Semigroup output => NonEmpty (Handler output) -> Handler output
+combineHandlers (firstHandler :| otherHandlers) =
+  let compose left right = do
+        leftUpdate <- left
+        (<>) leftUpdate <$> right
+   in foldl' (flip compose) firstHandler otherHandlers
+
+
 type ProjectionHandler state =
-  Handler (state -> state)
+  Handler (Endo state)
 
 
 projectionHandler ::
@@ -123,11 +145,11 @@ projectionHandler ::
 projectionHandler original = do
   message <- getMessage
   Message.ParsedMessage{..} <- getParsedMessage @payload @metadata
-  pure $ \state -> original message parsedPayload parsedMetadata state
+  pure . Endo $ \state -> original message parsedPayload parsedMetadata state
 
 
 type ProjectionHandlers state =
-  Handlers (state -> state)
+  Handlers (Endo state)
 
 
 addProjectionHandler ::
@@ -144,7 +166,7 @@ addProjectionHandler messageType original =
 projectionHandle :: ProjectionHandlers state -> Message -> state -> Either HandleError state
 projectionHandle handlers message state =
   let result = handle handlers message
-   in fmap ($ state) result
+   in fmap (($ state) . appEndo) result
 
 
 type SubscriptionHandler =
@@ -172,7 +194,7 @@ addSubscriptionHandler ::
   Message.MessageType ->
   (Message -> payload -> metadata -> IO ()) ->
   SubscriptionHandlers ->
-  SubscriptionHandlers 
+  SubscriptionHandlers
 addSubscriptionHandler messageType original =
   addHandler messageType (subscriptionHandler original)
 

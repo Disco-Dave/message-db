@@ -7,9 +7,8 @@ module MessageDb.Subscription
 where
 
 import Control.Concurrent (threadDelay)
-import Control.Exception.Safe (tryAny)
+import Control.Exception.Safe (handleAny)
 import Control.Monad (when)
-import Data.Bifunctor (first)
 import Data.Foldable (traverse_)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -80,19 +79,15 @@ start withConnection Subscription{..} = do
             condition
 
       handle :: Message -> IO ()
-      handle message = do
-        result <-
-          case Handlers.handle handlers message of
-            Left err ->
-              pure . Left $ FailureStrategy.HandleFailure err
-            Right effect ->
-              first FailureStrategy.UnknownFailure <$> tryAny effect
+      handle message =
+        let logHandleFailure =
+              FailureStrategy.logFailure failureStrategy message . FailureStrategy.HandleFailure
 
-        case result of
-          Right () ->
-            pure ()
-          Left reason ->
-            FailureStrategy.logFailure failureStrategy message reason
+            logUnknownFailure =
+              FailureStrategy.logFailure failureStrategy message . FailureStrategy.UnknownFailure
+         in handleAny logUnknownFailure $ do
+              result <- Handlers.subscriptionHandle handlers message
+              either logHandleFailure pure result
 
       processMessages :: [Message] -> IO (NumberOfMessages, Maybe Message.GlobalPosition)
       processMessages messages =
