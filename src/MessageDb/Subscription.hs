@@ -1,7 +1,6 @@
 -- | Subscribe to a category and react to the messages.
 module MessageDb.Subscription
   ( Subscription (..),
-    SubscriptionHandlers,
     subscribe,
     start,
   )
@@ -18,7 +17,6 @@ import Data.Maybe (fromMaybe)
 import Data.Void (Void)
 import MessageDb.Functions ()
 import qualified MessageDb.Functions as Functions
-import MessageDb.Handlers (Handlers)
 import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
@@ -30,9 +28,6 @@ import qualified MessageDb.Subscription.PositionStrategy as PositionStrategy
 import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
 
 
-type SubscriptionHandlers = Handlers () (IO ())
-
-
 -- | Defines how to subscribe to a category.
 data Subscription = Subscription
   { categoryName :: CategoryName
@@ -41,7 +36,7 @@ data Subscription = Subscription
   , logMessages :: NonEmpty Message -> IO ()
   , failureStrategy :: FailureStrategy
   , positionStrategy :: PositionStrategy
-  , handlers :: SubscriptionHandlers
+  , handlers :: Handlers.SubscriptionHandlers
   , consumerGroup :: Maybe Functions.ConsumerGroup
   , condition :: Maybe Functions.Condition
   , correlation :: Maybe Functions.Correlation
@@ -87,7 +82,7 @@ start withConnection Subscription{..} = do
       handle :: Message -> IO ()
       handle message = do
         result <-
-          case Handlers.handle handlers message () of
+          case Handlers.handle handlers message of
             Left err ->
               pure . Left $ FailureStrategy.HandleFailure err
             Right effect ->

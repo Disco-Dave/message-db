@@ -1,26 +1,32 @@
 module MessageDb.Handlers
   ( HandleError (..),
-    Handler,
-    ProjectionHandler,
-    SubscriptionHandler,
-    projectionHandler,
-    subscriptionHandler,
+    Handler (..),
+    runHandler,
+    getMessage,
+    getParsedMessage,
     Handlers,
-    ProjectionHandlers,
-    SubscriptionHandlers,
     emptyHandlers,
     listToHandlers,
     addHandler,
-    addProjectionHandler,
-    addSubscriptionHandler,
     removeHandler,
     handle,
+    ProjectionHandler,
+    projectionHandler,
+    ProjectionHandlers,
+    addProjectionHandler,
+    projectionHandle,
+    SubscriptionHandler,
+    subscriptionHandler,
+    SubscriptionHandlers,
+    addSubscriptionHandler,
+    subscriptionHandle,
   )
 where
 
 import Control.Exception (Exception)
+import Control.Monad.Except (Except, MonadError (throwError), runExcept)
+import Control.Monad.Reader (MonadReader (ask), ReaderT (..))
 import qualified Data.Aeson as Aeson
-import Data.Bifunctor (first)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import MessageDb.Message (Message)
@@ -37,95 +43,141 @@ data HandleError
 instance Exception HandleError
 
 
-type Handler' output = Message -> output
+newtype Handler output = Handler
+  { fromHandler :: ReaderT Message (Except HandleError) output
+  }
+  deriving
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadReader Message
+    , MonadError HandleError
+    )
 
 
-type ProjectionHandler' state = Handler' (state -> state)
+runHandler :: Handler output -> Message -> Either HandleError output
+runHandler handler message =
+  runExcept $ runReaderT (fromHandler handler) message
 
 
-type SubscriptionHandler' = Handler' (IO ())
+getMessage :: Handler Message
+getMessage =
+  ask
 
 
-type Handler state output = Message -> state -> Either HandleError output
-
-
-type ProjectionHandler state = Handler state state
-
-
-type SubscriptionHandler = Handler () (IO ())
-
-
-projectionHandler ::
+getParsedMessage ::
   (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
-  (Message -> payload -> metadata -> state -> state) ->
-  ProjectionHandler state
-projectionHandler original message state = do
-  Message.ParsedMessage{..} <- first HandlerParseFailure $ Message.parseMessage message
-  pure $ original message parsedPayload parsedMetadata state
+  Handler (Message.ParsedMessage payload metadata)
+getParsedMessage = do
+  message <- ask
+
+  case Message.parseMessage message of
+    Left err ->
+      throwError $ HandlerParseFailure err
+    Right msg ->
+      pure msg
 
 
-subscriptionHandler ::
-  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
-  (Message -> payload -> metadata -> IO ()) ->
-  SubscriptionHandler
-subscriptionHandler original message _ = do
-  Message.ParsedMessage{..} <- first HandlerParseFailure $ Message.parseMessage message
-  pure $ original message parsedPayload parsedMetadata
+type Handlers output =
+  Map Message.MessageType (Handler output)
 
 
-type Handlers state output = Map Message.MessageType (Handler state output)
-
-
-type ProjectionHandlers state = Handlers state state
-
-
-type SubscriptionHandlers = Handlers () (IO ())
-
-
-emptyHandlers :: Handlers status output
+emptyHandlers :: Handlers output
 emptyHandlers =
   Map.empty
 
 
-listToHandlers :: [(Message.MessageType, Handler state output)] -> Handlers state output
+listToHandlers :: [(Message.MessageType, Handler output)] -> Handlers output
 listToHandlers =
   Map.fromList
 
 
-addHandler :: Message.MessageType -> Handler state output -> Handlers state output -> Handlers state output
+addHandler :: Message.MessageType -> Handler output -> Handlers output -> Handlers output
 addHandler =
   Map.insert
 
 
+removeHandler :: Message.MessageType -> Handlers output -> Handlers output
+removeHandler =
+  Map.delete
+
+
+handle :: Handlers output -> Message -> Either HandleError output
+handle handlers message =
+  case Map.lookup (Message.messageType message) handlers of
+    Nothing ->
+      Left HandlerNotFound
+    Just handler ->
+      runHandler handler message
+
+
+type ProjectionHandler state =
+  Handler (state -> state)
+
+
+projectionHandler ::
+  forall payload metadata state.
+  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
+  (Message -> payload -> metadata -> state -> state) ->
+  ProjectionHandler state
+projectionHandler original = do
+  message <- getMessage
+  Message.ParsedMessage{..} <- getParsedMessage @payload @metadata
+  pure $ \state -> original message parsedPayload parsedMetadata state
+
+
+type ProjectionHandlers state =
+  Handlers (state -> state)
+
+
 addProjectionHandler ::
+  forall payload metadata state.
   (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
   Message.MessageType ->
   (Message -> payload -> metadata -> state -> state) ->
   ProjectionHandlers state ->
   ProjectionHandlers state
-addProjectionHandler messageType handler =
-  addHandler messageType (projectionHandler handler)
+addProjectionHandler messageType original =
+  addHandler messageType (projectionHandler original)
+
+
+projectionHandle :: ProjectionHandlers state -> Message -> state -> Either HandleError state
+projectionHandle handlers message state =
+  let result = handle handlers message
+   in fmap ($ state) result
+
+
+type SubscriptionHandler =
+  Handler (IO ())
+
+
+subscriptionHandler ::
+  forall payload metadata.
+  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
+  (Message -> payload -> metadata -> IO ()) ->
+  SubscriptionHandler
+subscriptionHandler original = do
+  message <- ask
+  Message.ParsedMessage{..} <- getParsedMessage @payload @metadata
+  pure $ original message parsedPayload parsedMetadata
+
+
+type SubscriptionHandlers =
+  Handlers (IO ())
 
 
 addSubscriptionHandler ::
+  forall payload metadata.
   (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
   Message.MessageType ->
   (Message -> payload -> metadata -> IO ()) ->
   SubscriptionHandlers ->
-  SubscriptionHandlers
-addSubscriptionHandler messageType handler =
-  addHandler messageType (subscriptionHandler handler)
+  SubscriptionHandlers 
+addSubscriptionHandler messageType original =
+  addHandler messageType (subscriptionHandler original)
 
 
-removeHandler :: Message.MessageType -> Handlers status output -> Handlers status output
-removeHandler =
-  Map.delete
-
-
-handle :: Handlers state output -> Message -> state -> Either HandleError output
-handle handlers message state =
-  case Map.lookup (Message.messageType message) handlers of
-    Nothing ->
-      Left HandlerNotFound
-    Just untypedHandler ->
-      untypedHandler message state
+subscriptionHandle :: SubscriptionHandlers -> Message -> IO (Either HandleError ())
+subscriptionHandle handlers message =
+  let result = handle handlers message
+   in either (pure . Left) (fmap Right) result

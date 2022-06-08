@@ -6,9 +6,9 @@ module MessageDb.Subscription.FailedMessage
   )
 where
 
+import Control.Monad.Except (liftEither)
 import Data.Aeson (KeyValue ((.=)), (.:))
 import qualified Data.Aeson as Aeson
-import Data.Bifunctor (first)
 import Data.Text (Text)
 import MessageDb.Handlers (Handlers)
 import qualified MessageDb.Handlers as Handlers
@@ -51,13 +51,10 @@ instance Aeson.FromJSON FailedMessage where
 {- | If you have a stream of 'FailedMessage' messages, then you can use
  this function so you can handle the original messages that failed.
 -}
-handleFailures :: Handlers state output -> Handlers state output
+handleFailures :: Handlers output -> Handlers output
 handleFailures originalHandlers =
-  let failedMessageHandle failedMessage state = do
-        Message.ParsedMessage{..} <-
-          first Handlers.HandlerParseFailure $
-            Message.parseMessage @FailedMessage @Message.Metadata failedMessage
-
+  let failedMessageHandle = do
+        Message.ParsedMessage{parsedPayload} <- Handlers.getParsedMessage @FailedMessage @Message.Metadata
         let originalMessage = message parsedPayload
-         in Handlers.handle originalHandlers originalMessage state
+         in liftEither $ Handlers.handle originalHandlers originalMessage
    in Handlers.addHandler messageType failedMessageHandle Handlers.emptyHandlers

@@ -80,7 +80,6 @@ library
   exposed-modules:
     MessageDb.Functions
     MessageDb.Handlers
-    MessageDb.Handlers2
     MessageDb.Message
     MessageDb.Projection
     MessageDb.StreamName
