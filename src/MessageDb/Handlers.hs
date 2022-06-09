@@ -27,8 +27,6 @@ import Control.Exception (Exception)
 import Control.Monad.Except (Except, MonadError (throwError), runExcept)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (..))
 import qualified Data.Aeson as Aeson
-import Data.Foldable (foldl')
-import Data.List.NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Semigroup
@@ -123,14 +121,6 @@ handle handlers message =
       Left HandlerNotFound
     Just handler ->
       runHandler handler message
-
-
-combineHandlers :: Semigroup output => NonEmpty (Handler output) -> Handler output
-combineHandlers (firstHandler :| otherHandlers) =
-  let compose left right = do
-        leftUpdate <- left
-        (<>) leftUpdate <$> right
-   in foldl' (flip compose) firstHandler otherHandlers
 
 
 type ProjectionHandler state =

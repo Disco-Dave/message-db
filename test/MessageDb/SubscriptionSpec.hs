@@ -8,13 +8,13 @@ import qualified Data.Set as Set
 import Examples.BankAccount (BankAccount (BankAccount))
 import qualified Examples.BankAccount as BankAccount
 import qualified MessageDb.Functions as Functions
-import MessageDb.Handlers (HandleError (..))
+import MessageDb.Handlers (ProjectionHandlers)
+import qualified MessageDb.Handlers as Handlers
+import MessageDb.Message (Message (..))
 import qualified MessageDb.Message as Message
 import MessageDb.Projection (Projected)
 import qualified MessageDb.Projection as Projection
-import MessageDb.Handlers (Handlers, ProjectionHandlers)
-import qualified  MessageDb.Handlers as Handlers
-import Test.Hspec
+import Test.Hspec (Spec, around, describe, it, shouldBe)
 import TestApp (TestApp, TestAppData (TestAppData))
 import qualified TestApp
 
@@ -40,19 +40,19 @@ fetchWithNoHandlers =
 
 fetchWithConversionErrors :: BankAccount.AccountId -> TestApp (Maybe (Projected BankAccount))
 fetchWithConversionErrors =
-  let handle :: TypedMessage Bool Bool -> BankAccount -> BankAccount
-      handle _ bankAccount = bankAccount
+  let handle :: Message -> Bool -> Bool -> BankAccount -> BankAccount
+      handle _ _ _ bankAccount = bankAccount
 
       handlers =
-        ProjectionHandlers.empty
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.Opened) handle
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.OpenRejected) handle
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.Closed) handle
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.CloseRejected) handle
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.Deposited) handle
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.DepositRejected) handle
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.Withdrawn) handle
-          & ProjectionHandlers.attach (Message.typeOf @BankAccount.WithdrawRejected) handle
+        Handlers.emptyHandlers
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.Opened) handle
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.OpenRejected) handle
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.Closed) handle
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.CloseRejected) handle
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.Deposited) handle
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.DepositRejected) handle
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.Withdrawn) handle
+          & Handlers.addProjectionHandler (Message.messageTypeOf @BankAccount.WithdrawRejected) handle
    in fetch handlers
 
 
@@ -110,12 +110,12 @@ spec =
         TestApp.runWith testAppData $ fetchWithNoHandlers accountId
 
       let unprocessed = Projection.unprocessed projectedAccount
-          streamPositions = Message.streamPosition . Projection.message <$> unprocessed
+          streamPositions = Message.messageStreamPosition . Projection.message <$> unprocessed
           reasons = fmap Projection.reason unprocessed
           state = Projection.state projectedAccount
 
       streamPositions `shouldBe` [0 .. 4]
-      reasons `shouldBe` replicate 5 MessageHandlerNotFound
+      reasons `shouldBe` replicate 5 Handlers.HandlerNotFound
       Projection.version projectedAccount `shouldBe` Functions.DoesNotExist
       Projection.versionIncludingUnprocessed projectedAccount `shouldBe` Functions.DoesExist 4
       state `shouldBe` Projection.initial BankAccount.projection
@@ -135,12 +135,12 @@ spec =
         TestApp.runWith testAppData $ fetchWithConversionErrors accountId
 
       let unprocessed = Projection.unprocessed projectedAccount
-          streamPositions = Message.streamPosition . Projection.message <$> unprocessed
+          streamPositions = Message.messageStreamPosition . Projection.message <$> unprocessed
           reasons = fmap Projection.reason unprocessed
           state = Projection.state projectedAccount
           expectedReason =
-            MessageConversionFailure $
-              ConversionFailure
+            Handlers.HandlerParseFailure $
+              Message.ParseMessageFailure
                 { failedPayloadReason = Just "Error in $: expected Bool, but encountered Object"
                 , failedMetadataReason = Just "Error in $: expected Bool, but encountered Object"
                 }

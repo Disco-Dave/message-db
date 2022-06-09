@@ -1,7 +1,10 @@
 module Main (main) where
 
 import qualified Spec
-import Test.Hspec (hspec, parallel)
+import System.Timeout (timeout)
+import Test.Hspec (around_, hspec, parallel)
+import Control.Monad
 
 main :: IO ()
-main = hspec $ parallel Spec.spec
+main = hspec . parallel . around_ (void . timeout 10_000_000) $ 
+  Spec.spec

@@ -93,32 +93,32 @@ withDatabaseUrl use = do
               ]
           }
 
-  let retryPolicy =
-          Retry.limitRetriesByCumulativeDelay 32_000 $
-            Retry.exponentialBackoff 1_000
+  --let retryPolicy =
+          --Retry.limitRetriesByCumulativeDelay 1_000_000 $
+            --Retry.exponentialBackoff 1_000
 
-      exceptionHandlers =
-        let restartFor :: forall e a. Exception e => a -> Handler IO Bool
-            restartFor _ = Handler @_ @_ @e $ \_ -> pure True
-         in [ restartFor @PostgresTemp.StartError
-            , restartFor @IOException
-            ]
+      --exceptionHandlers =
+        --let restartFor :: forall e a. Exception e => a -> Handler IO Bool
+            --restartFor _ = Handler @_ @_ @e $ \_ -> pure True
+         --in [ restartFor @PostgresTemp.StartError
+            --, restartFor @IOException
+            --]
 
-  Retry.recovering retryPolicy exceptionHandlers $ \_ -> do
-    result <- PostgresTemp.withConfig tempConfig $ \db ->
-      let options = PostgresTemp.toConnectionOptions db
-          dbUrl =
-            PostgresOptions.toConnectionString $
-              options
-                { PostgresOptions.user = pure "test_user"
-                , PostgresOptions.password = pure "password"
-                , PostgresOptions.dbname = pure "message_store"
-                }
-       in migrate options *> use dbUrl
+--  Retry.recovering retryPolicy exceptionHandlers $ \_ -> do
+  result <- PostgresTemp.withConfig tempConfig $ \db ->
+    let options = PostgresTemp.toConnectionOptions db
+        dbUrl =
+          PostgresOptions.toConnectionString $
+            options
+              { PostgresOptions.user = pure "test_user"
+              , PostgresOptions.password = pure "password"
+              , PostgresOptions.dbname = pure "message_store"
+              }
+     in migrate options *> use dbUrl
 
-    case result of
-      Left err -> UnliftIO.throwIO err
-      Right value -> pure value
+  case result of
+    Left err -> UnliftIO.throwIO err
+    Right value -> pure value
 
 
 withConnection :: (Postgres.Connection -> IO a) -> IO a

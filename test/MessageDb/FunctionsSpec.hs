@@ -15,10 +15,10 @@ import Generators.StreamName (genCategoryName, genIdentityName, genStreamName)
 import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
+import qualified MessageDb.StreamName as StreamName
 import TempMessageDb (withConnection)
 import Test.Hspec
 import UnliftIO.Exception (try)
-import qualified MessageDb.StreamName as StreamName
 
 
 isCorrectTimestamp :: Time.UTCTime -> Time.NominalDiffTime -> Message.CreatedAt -> Bool
