@@ -51,20 +51,20 @@ genMetadata =
   fmap Message.Metadata genAesonValue
 
 
-genCreatedAtTimestamp :: Gen Message.CreatedAtTimestamp
+genCreatedAtTimestamp :: Gen Message.CreatedAt
 genCreatedAtTimestamp =
-  fmap Message.CreatedAtTimestamp genUTCTime
+  fmap Message.CreatedAt genUTCTime
 
 
 genMessage :: Gen Message
 genMessage = do
   messageId <- genMessageId
-  streamName <- genStreamName
+  messageStream <- genStreamName
   messageType <- genMessageType
-  streamPosition <- genStreamPosition
-  globalPosition <- genGlobalPosition
-  payload <- genPayload
-  metadata <- genMetadata
-  createdAtTimestamp <- genCreatedAtTimestamp
+  messageStreamPosition <- genStreamPosition
+  messageGlobalPosition <- genGlobalPosition
+  messagePayload <- genPayload
+  messageMetadata <- genMetadata
+  messageCreatedAt <- genCreatedAtTimestamp
 
   pure Message{..}

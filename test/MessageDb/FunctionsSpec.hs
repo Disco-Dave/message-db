@@ -3,7 +3,6 @@ module MessageDb.FunctionsSpec
   )
 where
 
-import qualified MessageDb
 import Control.Monad (replicateM_)
 import Data.Foldable (for_)
 import Data.Maybe (fromMaybe)
@@ -19,10 +18,11 @@ import qualified MessageDb.Message as Message
 import TempMessageDb (withConnection)
 import Test.Hspec
 import UnliftIO.Exception (try)
+import qualified MessageDb.StreamName as StreamName
 
 
-isCorrectTimestamp :: Time.UTCTime -> Time.NominalDiffTime -> Message.CreatedAtTimestamp -> Bool
-isCorrectTimestamp now tolerance (Message.CreatedAtTimestamp timestamp) =
+isCorrectTimestamp :: Time.UTCTime -> Time.NominalDiffTime -> Message.CreatedAt -> Bool
+isCorrectTimestamp now tolerance (Message.CreatedAt timestamp) =
   abs (Time.diffUTCTime now timestamp) <= tolerance
 
 
@@ -54,11 +54,11 @@ spec =
         Just message <- Functions.lookupById connection messageId
 
         Message.messageId message `shouldBe` messageId
-        Message.streamName message `shouldBe` streamName
+        Message.messageStream message `shouldBe` streamName
         Message.messageType message `shouldBe` messageType
-        Message.payload message `shouldBe` payload
-        Message.metadata message `shouldBe` metadata
-        Message.createdAtTimestamp message `shouldSatisfy` isCorrectTimestamp now 0.1
+        Message.messagePayload message `shouldBe` payload
+        Message.messageMetadata message `shouldBe` metadata
+        Message.messageCreatedAt message `shouldSatisfy` isCorrectTimestamp now 0.1
         position `shouldBe` 0
 
     describe "lookupByPosition" $ do
@@ -83,7 +83,7 @@ spec =
             Nothing
 
         Just expectedMessage <- Functions.lookupById connection messageId
-        Just actualMessage <- Functions.lookupByPosition connection (Message.globalPosition expectedMessage)
+        Just actualMessage <- Functions.lookupByPosition connection (Message.messageGlobalPosition expectedMessage)
 
         actualMessage `shouldBe` expectedMessage
 
@@ -107,10 +107,10 @@ spec =
           Functions.lookupById connection messageId
 
         Message.messageId message `shouldBe` messageId
-        Message.streamName message `shouldBe` streamName
+        Message.messageStream message `shouldBe` streamName
         Message.messageType message `shouldBe` messageType
-        Message.payload message `shouldBe` payload
-        Message.metadata message `shouldBe` metadata
+        Message.messagePayload message `shouldBe` payload
+        Message.messageMetadata message `shouldBe` metadata
 
       it "can write a message without metadata" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -130,10 +130,10 @@ spec =
           Functions.lookupById connection messageId
 
         Message.messageId message `shouldBe` messageId
-        Message.streamName message `shouldBe` streamName
+        Message.messageStream message `shouldBe` streamName
         Message.messageType message `shouldBe` messageType
-        Message.payload message `shouldBe` payload
-        Message.metadata message `shouldBe` Message.nullMetadata
+        Message.messagePayload message `shouldBe` payload
+        Message.messageMetadata message `shouldBe` Message.nullMetadata
 
       it "throws exception when expected version check fails" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -187,7 +187,7 @@ spec =
                 Left (Functions.ExpectedVersionViolation err) -> Simple.sqlErrorMsg err
 
             expectedErrorMessage =
-              let streamNameBS = encodeUtf8 (MessageDb.streamNameToText streamName)
+              let streamNameBS = encodeUtf8 (StreamName.streamNameToText streamName)
                in "Wrong expected version: 4 (Stream: " <> streamNameBS <> ", Stream Version: 10)"
 
         actualErrorMessage `shouldBe` expectedErrorMessage
@@ -230,11 +230,11 @@ spec =
         length messages `shouldBe` 10
 
         for_ (zip [0 .. 9] messages) $ \(index, message) -> do
-          Message.streamPosition message `shouldBe` Message.StreamPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageStreamPosition message `shouldBe` Message.StreamPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns messages after specified stream position" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -262,11 +262,11 @@ spec =
         length messages `shouldBe` 5
 
         for_ (zip [5 .. 9] messages) $ \(index, message) -> do
-          Message.streamPosition message `shouldBe` Message.StreamPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageStreamPosition message `shouldBe` Message.StreamPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns less than or equal to batch size when specified" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -321,32 +321,32 @@ spec =
         length fourthBatch `shouldBe` 3
 
         for_ (zip [0 .. 4] firstBatch) $ \(index, message) -> do
-          Message.streamPosition message `shouldBe` Message.StreamPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageStreamPosition message `shouldBe` Message.StreamPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [5 .. 9] secondBatch) $ \(index, message) -> do
-          Message.streamPosition message `shouldBe` Message.StreamPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageStreamPosition message `shouldBe` Message.StreamPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [10 .. 14] thirdBatch) $ \(index, message) -> do
-          Message.streamPosition message `shouldBe` Message.StreamPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageStreamPosition message `shouldBe` Message.StreamPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [15 .. 17] fourthBatch) $ \(index, message) -> do
-          Message.streamPosition message `shouldBe` Message.StreamPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageStreamPosition message `shouldBe` Message.StreamPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns everything when a batch size of unlimited is specified" $ \connection -> do
         streamName <- Gen.sample genStreamName
@@ -422,11 +422,11 @@ spec =
             streamName
             Nothing
             Nothing
-            (Just . Functions.Condition $ "type <> '" <> Message.fromMessageType messageType2 <> "'")
+            (Just . Functions.Condition $ "type <> '" <> Message.messageTypeToText messageType2 <> "'")
 
         length messages `shouldBe` 5
         messages `shouldSatisfy` all ((== messageType1) . Message.messageType)
-        messages `shouldSatisfy` all (odd . Message.fromStreamPosition . Message.streamPosition)
+        messages `shouldSatisfy` all (odd . Message.streamPositionToNatural . Message.messageStreamPosition)
 
     describe "getCategoryMessages" $ do
       it "returns empty list when no messages exist in category" $ \connection -> do
@@ -447,7 +447,7 @@ spec =
       it "returns messages when there are messages in the category" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = MessageDb.addIdentityToCategory categoryName identityName
+        let streamName = StreamName.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -474,16 +474,16 @@ spec =
         length messages `shouldBe` 10
 
         for_ (zip [0 .. 9] messages) $ \(index, message) -> do
-          Message.streamPosition message `shouldBe` Message.StreamPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageStreamPosition message `shouldBe` Message.StreamPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns messages after specified position" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = MessageDb.addIdentityToCategory categoryName identityName
+        let streamName = StreamName.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -510,16 +510,16 @@ spec =
         length messages `shouldBe` 6
 
         for_ (zip [5 .. 9] messages) $ \(index, message) -> do
-          Message.globalPosition message `shouldBe` Message.GlobalPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageGlobalPosition message `shouldBe` Message.GlobalPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns up to 1000 messages when batch size is not specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = MessageDb.addIdentityToCategory categoryName identityName
+        let streamName = StreamName.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -546,7 +546,7 @@ spec =
       it "returns less than or equal to batch size of messages" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = MessageDb.addIdentityToCategory categoryName identityName
+        let streamName = StreamName.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -606,37 +606,37 @@ spec =
         length fourthBatch `shouldBe` 3
 
         for_ (zip [1 .. 5] firstBatch) $ \(index, message) -> do
-          Message.globalPosition message `shouldBe` Message.GlobalPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageGlobalPosition message `shouldBe` Message.GlobalPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [6 .. 10] secondBatch) $ \(index, message) -> do
-          Message.globalPosition message `shouldBe` Message.GlobalPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageGlobalPosition message `shouldBe` Message.GlobalPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [11 .. 15] thirdBatch) $ \(index, message) -> do
-          Message.globalPosition message `shouldBe` Message.GlobalPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageGlobalPosition message `shouldBe` Message.GlobalPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
         for_ (zip [16 .. 18] fourthBatch) $ \(index, message) -> do
-          Message.globalPosition message `shouldBe` Message.GlobalPosition index
-          Message.streamName message `shouldBe` streamName
+          Message.messageGlobalPosition message `shouldBe` Message.GlobalPosition index
+          Message.messageStream message `shouldBe` streamName
           Message.messageType message `shouldBe` messageType
-          Message.payload message `shouldBe` payload
-          Message.metadata message `shouldBe` fromMaybe Message.nullMetadata metadata
+          Message.messagePayload message `shouldBe` payload
+          Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns everything when a batch size of unlimited is specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = MessageDb.addIdentityToCategory categoryName identityName
+        let streamName = StreamName.addIdentityToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -682,7 +682,7 @@ spec =
 
         replicateM_ 100 $ do
           identityName <- Gen.sample genIdentityName
-          let streamName = MessageDb.addIdentityToCategory categoryName identityName
+          let streamName = StreamName.addIdentityToCategory categoryName identityName
           Functions.writeMessage
             connection
             streamName
@@ -724,7 +724,7 @@ spec =
       it "returns messages that match the condition when specified" $ \connection -> do
         categoryName <- Gen.sample genCategoryName
         identityName <- Gen.sample genIdentityName
-        let streamName = MessageDb.addIdentityToCategory categoryName identityName
+        let streamName = StreamName.addIdentityToCategory categoryName identityName
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
 
@@ -748,11 +748,11 @@ spec =
             (Just Functions.Unlimited)
             Nothing
             Nothing
-            (Just . Functions.Condition $ "type <> '" <> Message.fromMessageType messageType2 <> "'")
+            (Just . Functions.Condition $ "type <> '" <> Message.messageTypeToText messageType2 <> "'")
 
         length messages `shouldBe` 5
         messages `shouldSatisfy` all ((== messageType1) . Message.messageType)
-        messages `shouldSatisfy` all (odd . Message.fromStreamPosition . Message.streamPosition)
+        messages `shouldSatisfy` all (odd . Message.streamPositionToNatural . Message.messageStreamPosition)
 
     describe "getLastStreamMessage" $ do
       it "returns nothing when there are no messages in stream" $ \connection -> do
@@ -777,7 +777,7 @@ spec =
 
         Just message <- Functions.getLastStreamMessage connection streamName
 
-        Message.streamPosition message `shouldBe` 9
+        Message.messageStreamPosition message `shouldBe` 9
 
     describe "streamVersion" $ do
       it "returns nothing when stream is empty" $ \connection -> do

@@ -8,17 +8,15 @@ import Data.Function ((&))
 import qualified Data.Pool as Pool
 import qualified Examples.BankAccount as BankAccount
 import GHC.Generics (Generic)
-import qualified MessageDb
 import qualified MessageDb.Functions as Functions
+import qualified MessageDb.Handlers as Handlers
+import MessageDb.Message (Message (..))
 import qualified MessageDb.Message as Message
 import qualified MessageDb.StreamName as StreamName
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
 import qualified MessageDb.Subscription.FailedMessage as FailedMessage
 import qualified MessageDb.Subscription.FailureStrategy as FailureStrategy
-import qualified MessageDb.Subscription.Handlers as SubscriptionHandlers
-import MessageDb.TypedMessage (TypedMessage)
-import qualified MessageDb.TypedMessage as TypedMessage
 import Test.Hspec
 import TestApp (TestApp)
 import qualified TestApp
@@ -41,34 +39,34 @@ instance Aeson.ToJSON InterestComputed
 instance Aeson.FromJSON InterestComputed
 
 
-computeInterest :: Bool -> Functions.WithConnection -> TypedMessage ComputeInterest Message.Metadata -> IO ()
-computeInterest canFail withConnection message = do
-  let ComputeInterest{shouldFail} = TypedMessage.payload message
+computeInterest :: Bool -> Functions.WithConnection -> Message -> ComputeInterest -> Message.Metadata -> IO ()
+computeInterest canFail withConnection message payload _ = do
+  let ComputeInterest{shouldFail} = payload
 
   when (shouldFail && canFail) $
     throwString "Something bad happened"
 
   Just identity <-
-    pure . MessageDb.identityOfStream $ TypedMessage.streamName message
+    pure . StreamName.identityOfStream $ messageStream message
 
   void . withConnection $ \connection ->
     Functions.writeMessage
       connection
       (BankAccount.entityStream $ coerce identity)
-      (Message.typeOf @InterestComputed)
+      (Message.messageTypeOf @InterestComputed)
       (InterestComputed 0.01)
-      (Just . BankAccount.AccountMetadata $ TypedMessage.globalPosition message)
+      (Just . BankAccount.AccountMetadata $ messageGlobalPosition message)
       Nothing
 
 
-failureCategory :: MessageDb.CategoryName
+failureCategory :: StreamName.CategoryName
 failureCategory =
-  MessageDb.categoryName "failures"
+  StreamName.categoryName "failures"
 
 
 failureStream :: BankAccount.AccountId -> StreamName.StreamName
 failureStream =
-  MessageDb.addIdentityToCategory failureCategory . coerce
+  StreamName.addIdentityToCategory failureCategory . coerce
 
 
 subscribeCommands :: TestApp Subscription
@@ -79,8 +77,8 @@ subscribeCommands = do
   let connectionPool = TestApp.connectionPool testAppData
       handlers =
         Subscription.handlers subscription
-          & SubscriptionHandlers.attach
-            (Message.typeOf @ComputeInterest)
+          & Handlers.addSubscriptionHandler
+            (Message.messageTypeOf @ComputeInterest)
             (computeInterest True (Pool.withResource connectionPool))
 
   pure $
@@ -101,15 +99,15 @@ subscribeFailures = do
   let connectionPool = TestApp.connectionPool testAppData
       handlers =
         Subscription.handlers subscription
-          & SubscriptionHandlers.attach
-            (Message.typeOf @ComputeInterest)
+          & Handlers.addSubscriptionHandler
+            (Message.messageTypeOf @ComputeInterest)
             (computeInterest False (Pool.withResource connectionPool))
           & FailedMessage.handleFailures
 
   pure $
     subscription
       { Subscription.failureStrategy = FailureStrategy.ignoreFailures
-      , Subscription.categoryName = MessageDb.categoryName "failures"
+      , Subscription.categoryName = StreamName.categoryName "failures"
       , Subscription.handlers = handlers
       }
 

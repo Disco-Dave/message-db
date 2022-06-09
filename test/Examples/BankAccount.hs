@@ -34,10 +34,10 @@ module Examples.BankAccount
     close,
     deposit,
     withdraw,
-    --subscribe,
-    --send,
+    subscribe,
+    send,
     markAsProcessed,
-    --fetch,
+    fetch,
   )
 where
 
@@ -46,13 +46,13 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (MonadReader (ask))
 import qualified Data.Aeson as Aeson
 import Data.Coerce (coerce)
-import Data.Function ((&))
 import Data.Maybe (catMaybes)
 import qualified Data.Pool as Pool
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Time (UTCTime)
+import qualified Data.Time as Time
 import Data.Typeable (Typeable)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID.V4
@@ -424,23 +424,25 @@ instance Aeson.FromJSON WithdrawRejected
 
 
 -- | Handle the request to withdraw money.
-withdraw :: Withdraw -> BankAccount -> UTCTime -> Either WithdrawRejected Withdrawn
-withdraw payload bankAccount now =
-  let reject reason =
-        Left
+withdraw :: Withdraw -> BankAccount -> TestApp (Either WithdrawRejected Withdrawn)
+withdraw payload bankAccount = do
+  let reject reason = do
+        now <- liftIO Time.getCurrentTime
+        pure . Left $
           WithdrawRejected
             { rejectedWithdrawAmount = withdrawAmount payload
             , withdrawRejectedReason = reason
             , rejectedAt = now
             }
-   in if isOpened bankAccount
-        then
-          if (balance bankAccount >= 0)
-            && (withdrawAmount payload >= 0)
-            && (withdrawAmount payload <= balance bankAccount)
-            then Right . Withdrawn $ withdrawAmount payload
-            else reject InsufficientFunds
-        else reject WithdrawFromClosedAccount
+
+  if isOpened bankAccount
+    then
+      if (balance bankAccount >= 0)
+        && (withdrawAmount payload >= 0)
+        && (withdrawAmount payload <= balance bankAccount)
+        then pure . Right . Withdrawn $ withdrawAmount payload
+        else reject InsufficientFunds
+    else reject WithdrawFromClosedAccount
 
 
 -- | Record the 'Withdrawn' event in our 'BankAccount' 'projection'.
@@ -532,31 +534,33 @@ handleCommand ::
   , Typeable success
   , Aeson.ToJSON success
   ) =>
-  (command -> BankAccount -> Either failure success) ->
+  (command -> BankAccount -> TestApp (Either failure success)) ->
   Message ->
   command ->
   Message.Metadata ->
   TestApp ()
-handleCommand processCommand Message{globalPosition, streamName} command _ = do
-  Just accountId <- pure . coerce $ MessageDb.identityOfStream streamName
+handleCommand processCommand Message{messageGlobalPosition, messageStream} command _ = do
+  Just accountId <- pure . coerce $ StreamName.identityOfStream messageStream
 
   let targetStream = entityStream accountId
 
   projectedAccount <- fetch accountId
 
   let bankAccount = maybe (Projection.initial projection) Projection.state projectedAccount
-      hasBeenRan = Set.member globalPosition $ commandsProcessed bankAccount
+      hasBeenRan = Set.member messageGlobalPosition $ commandsProcessed bankAccount
 
   -- This is where the `AccountMetadata' comes in handy. Since we recorded the global positions of commands that we already
   -- processed we can implement idempotence by checking if we've seen this global position before.
   unless hasBeenRan $ do
+    result <- processCommand command bankAccount
+
     let (eventType, event) =
-          case processCommand payload bankAccount of
-            Left failure -> (Message.typeOf @failure, Aeson.toJSON failure)
-            Right success -> (Message.typeOf @success, Aeson.toJSON success)
+          case result of
+            Left failure -> (Message.messageTypeOf @failure, Aeson.toJSON failure)
+            Right success -> (Message.messageTypeOf @success, Aeson.toJSON success)
 
         -- Here is we we construct the metadata that will be useful later for idempotence checks.
-        metadata = AccountMetadata globalPosition
+        metadata = AccountMetadata messageGlobalPosition
 
         -- The expected version is used for optimistic concurrency and ensures that this event
         -- is the result of a command on the most up to date version of the stream.
@@ -586,11 +590,13 @@ subscribe =
             -- Look at 'MessageDb.Subscription.FailureStrategy' for different ways to handle this.
             FailureStrategy $ \_ reason -> throwIO reason
         , Subscription.handlers =
-            let attach eventType processCommand =
-                  SubscriptionHandlers.attach eventType (runInIO . handleCommand processCommand)
-             in SubscriptionHandlers.empty
-                  & attach (Message.typeOf @Open) open
-                  & attach (Message.typeOf @Close) close
-                  & attach (Message.typeOf @Deposit) deposit
-                  & attach (Message.typeOf @Withdraw) withdraw
+            let toHandler :: (Aeson.FromJSON c, Typeable f, Typeable s, Aeson.ToJSON f, Aeson.ToJSON s) => (c -> BankAccount -> TestApp (Either f s)) -> Handlers.SubscriptionHandler
+                toHandler processCommand = Handlers.subscriptionHandler $ \message payload metadata ->
+                  runInIO $ handleCommand processCommand message payload metadata
+             in Handlers.listToHandlers
+                  [ (Message.messageTypeOf @Open, toHandler (\m p -> pure $ open m p))
+                  , (Message.messageTypeOf @Close, toHandler (\m p -> pure $ close m p))
+                  , (Message.messageTypeOf @Deposit, toHandler (\m p -> pure $ deposit m p))
+                  , (Message.messageTypeOf @Withdraw, toHandler withdraw)
+                  ]
         }

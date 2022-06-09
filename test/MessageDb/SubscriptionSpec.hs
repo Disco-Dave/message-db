@@ -12,9 +12,8 @@ import MessageDb.Handlers (HandleError (..))
 import qualified MessageDb.Message as Message
 import MessageDb.Projection (Projected)
 import qualified MessageDb.Projection as Projection
-import MessageDb.Projection.Handlers (ProjectionHandlers)
-import qualified MessageDb.Projection.Handlers as ProjectionHandlers
-import MessageDb.TypedMessage (ConversionFailure (..), TypedMessage)
+import MessageDb.Handlers (Handlers, ProjectionHandlers)
+import qualified  MessageDb.Handlers as Handlers
 import Test.Hspec
 import TestApp (TestApp, TestAppData (TestAppData))
 import qualified TestApp
