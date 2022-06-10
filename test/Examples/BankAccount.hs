@@ -478,7 +478,7 @@ projection =
         markAsProcessedHandler <> (Handlers.projectionHandler @_ @Message.Metadata $ \_ payload _ -> f payload)
       handlers =
         Handlers.listToHandlers
-          [ (Message.messageTypeOf @Open, toHandler opened)
+          [ (Message.messageTypeOf @Opened, toHandler opened)
           , (Message.messageTypeOf @OpenRejected, markAsProcessedHandler)
           , (Message.messageTypeOf @Closed, toHandler closed)
           , (Message.messageTypeOf @CloseRejected, markAsProcessedHandler)
@@ -533,56 +533,58 @@ handleCommand ::
   , Aeson.ToJSON failure
   , Typeable success
   , Aeson.ToJSON success
+  , Aeson.FromJSON command
   ) =>
+  (forall a. TestApp a -> IO a) ->
   (command -> BankAccount -> TestApp (Either failure success)) ->
-  Message ->
-  command ->
-  Message.Metadata ->
-  TestApp ()
-handleCommand processCommand Message{messageGlobalPosition, messageStream} command _ = do
-  Just accountId <- pure . coerce $ StreamName.identityOfStream messageStream
+  Handlers.SubscriptionHandler
+handleCommand runInIO processCommand =
+  Handlers.subscriptionHandler @_ @Message.Metadata $ \Message{messageStream, messageGlobalPosition} command _ -> do
+    Just accountId <- pure . coerce $ StreamName.identityOfStream messageStream
 
-  let targetStream = entityStream accountId
+    let targetStream = entityStream accountId
 
-  projectedAccount <- fetch accountId
+    projectedAccount <- runInIO $ fetch accountId
 
-  let bankAccount = maybe (Projection.initial projection) Projection.state projectedAccount
-      hasBeenRan = Set.member messageGlobalPosition $ commandsProcessed bankAccount
+    let bankAccount = maybe (Projection.initial projection) Projection.state projectedAccount
+        hasBeenRan = Set.member messageGlobalPosition $ commandsProcessed bankAccount
 
-  -- This is where the `AccountMetadata' comes in handy. Since we recorded the global positions of commands that we already
-  -- processed we can implement idempotence by checking if we've seen this global position before.
-  unless hasBeenRan $ do
-    result <- processCommand command bankAccount
+    -- This is where the `AccountMetadata' comes in handy. Since we recorded the global positions of commands that we already
+    -- processed we can implement idempotence by checking if we've seen this global position before.
+    unless hasBeenRan $ do
+      result <- runInIO $ processCommand command bankAccount
 
-    let (eventType, event) =
-          case result of
-            Left failure -> (Message.messageTypeOf @failure, Aeson.toJSON failure)
-            Right success -> (Message.messageTypeOf @success, Aeson.toJSON success)
+      let (eventType, event) =
+            case result of
+              Left failure -> (Message.messageTypeOf @failure, Aeson.toJSON failure)
+              Right success -> (Message.messageTypeOf @success, Aeson.toJSON success)
 
-        -- Here is we we construct the metadata that will be useful later for idempotence checks.
-        metadata = AccountMetadata messageGlobalPosition
+          -- Here is we we construct the metadata that will be useful later for idempotence checks.
+          metadata = AccountMetadata messageGlobalPosition
 
-        -- The expected version is used for optimistic concurrency and ensures that this event
-        -- is the result of a command on the most up to date version of the stream.
-        expectedVersion =
-          Functions.ExpectedVersion $
-            maybe Functions.DoesNotExist Projection.version projectedAccount
+          -- The expected version is used for optimistic concurrency and ensures that this event
+          -- is the result of a command on the most up to date version of the stream.
+          expectedVersion =
+            Functions.ExpectedVersion $
+              maybe Functions.DoesNotExist Projection.version projectedAccount
 
-    TestApp.withConnection $ \connection ->
-      liftIO . void $
-        Functions.writeMessage
-          connection
-          targetStream
-          eventType
-          event
-          (Just metadata)
-          (Just expectedVersion)
+      runInIO . TestApp.withConnection $ \connection ->
+        liftIO . void $
+          Functions.writeMessage
+            connection
+            targetStream
+            eventType
+            event
+            (Just metadata)
+            (Just expectedVersion)
 
 
--- | Subscribe to the 'BankAccount's command stream. You'd use 'Subscription.start' to start this subscription.
+{- | Subscribe to the 'BankAccount's command stream. You'd use 'Subscription.start' to start this subscription.
+ 'subscribe' alongside 'handleCommand' demostrate how it's possible to construct a subscription that uses a monad other than IO. 
+-}
 subscribe :: TestApp Subscription
 subscribe =
-  withRunInIO $ \runInIO ->
+  withRunInIO $ \runInIO -> do
     pure $
       (Subscription.subscribe commandCategory)
         { Subscription.failureStrategy =
@@ -590,13 +592,10 @@ subscribe =
             -- Look at 'MessageDb.Subscription.FailureStrategy' for different ways to handle this.
             FailureStrategy $ \_ reason -> throwIO reason
         , Subscription.handlers =
-            let toHandler :: (Aeson.FromJSON c, Typeable f, Typeable s, Aeson.ToJSON f, Aeson.ToJSON s) => (c -> BankAccount -> TestApp (Either f s)) -> Handlers.SubscriptionHandler
-                toHandler processCommand = Handlers.subscriptionHandler $ \message payload metadata ->
-                  runInIO $ handleCommand processCommand message payload metadata
-             in Handlers.listToHandlers
-                  [ (Message.messageTypeOf @Open, toHandler (\m p -> pure $ open m p))
-                  , (Message.messageTypeOf @Close, toHandler (\m p -> pure $ close m p))
-                  , (Message.messageTypeOf @Deposit, toHandler (\m p -> pure $ deposit m p))
-                  , (Message.messageTypeOf @Withdraw, toHandler withdraw)
-                  ]
+            Handlers.listToHandlers
+              [ (Message.messageTypeOf @Open, handleCommand runInIO (\m p -> pure $ open m p))
+              , (Message.messageTypeOf @Close, handleCommand runInIO (\m p -> pure $ close m p))
+              , (Message.messageTypeOf @Deposit, handleCommand runInIO (\m p -> pure $ deposit m p))
+              , (Message.messageTypeOf @Withdraw, handleCommand runInIO withdraw)
+              ]
         }

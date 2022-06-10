@@ -31,8 +31,6 @@ common shared
     DeriveGeneric
     DerivingVia
     FlexibleContexts
-    FlexibleInstances
-    GADTs
     GeneralizedNewtypeDeriving
     LambdaCase
     NamedFieldPuns
@@ -42,9 +40,7 @@ common shared
     RecordWildCards
     ScopedTypeVariables
     StrictData
-    TupleSections
     TypeApplications
-    TypeFamilies
 
   ghc-options:
     -Weverything 
