@@ -60,8 +60,8 @@ jobs:
         os: ["ubuntu-latest"]
         stack: ["2.7.5"]
         resolver:
-          - "lts-18.28"
-          - "lts-19.8"
+          - "lts-18"
+          - "lts-19"
           - "nightly"
     steps:
       - uses: actions/checkout@v2
