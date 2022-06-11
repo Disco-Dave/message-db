@@ -18,7 +18,7 @@ import Data.Pool (Pool)
 import qualified Data.Pool as Pool
 import qualified Database.PostgreSQL.Simple as Postgres
 import qualified MessageDb.Functions as Functions
-import MessageDb.StreamName (CategoryName, StreamName)
+import MessageDb.StreamName (Category, StreamName)
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
 import MessageDb.Units (NumberOfMessages (NumberOfMessages))
@@ -123,7 +123,7 @@ blockUntilStreamHas streamName numberOfMessages = do
     else pure ()
 
 
-blockUntilCategoryHas :: CategoryName -> NumberOfMessages -> TestApp ()
+blockUntilCategoryHas :: Category -> NumberOfMessages -> TestApp ()
 blockUntilCategoryHas categoryName numberOfMessages = do
   messages <- withConnection $ \connection ->
     liftIO $

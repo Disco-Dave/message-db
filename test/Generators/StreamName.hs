@@ -1,6 +1,6 @@
 module Generators.StreamName
-  ( genIdentityName,
-    genCategoryName,
+  ( genIdentifier,
+    genCategory,
     genStreamName,
   )
 where
@@ -12,30 +12,30 @@ import MessageDb.StreamName (StreamName (..))
 import qualified MessageDb.StreamName as StreamName
 
 
-genIdentityName :: Gen StreamName.IdentityName
-genIdentityName =
+genIdentifier :: Gen StreamName.Identifier
+genIdentifier =
   let range = Range.linear 5 50
       validCharacters =
         Gen.frequency
           [ (25, Gen.alphaNum)
           , (1, pure '-')
           ]
-   in StreamName.IdentityName <$> Gen.text range validCharacters
+   in StreamName.Identifier <$> Gen.text range validCharacters
 
 
-genCategoryName :: Gen StreamName.CategoryName
-genCategoryName =
+genCategory :: Gen StreamName.Category
+genCategory =
   let range = Range.linear 5 50
       validCharacters =
         Gen.frequency
           [ (30, Gen.alphaNum)
           , (1, pure ':')
           ]
-   in StreamName.categoryName <$> Gen.text range validCharacters
+   in StreamName.category <$> Gen.text range validCharacters
 
 
 genStreamName :: Gen StreamName
 genStreamName = do
-  StreamName.addIdentityToCategory
-    <$> genCategoryName
-    <*> genIdentityName
+  StreamName.addIdentifierToCategory
+    <$> genCategory
+    <*> genIdentifier

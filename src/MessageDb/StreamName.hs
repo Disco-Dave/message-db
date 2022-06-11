@@ -10,14 +10,14 @@
 -}
 module MessageDb.StreamName
   ( StreamName (..),
-    CategoryName,
+    Category,
     categoryOfStream,
-    categoryNameToText,
-    categoryName,
-    IdentityName (..),
-    identityOfStream,
-    addIdentityToCategory,
-    addMaybeIdentityToCategory,
+    categoryToText,
+    category,
+    Identifier (..),
+    identifierOfStream,
+    addIdentifierToCategory,
+    addMaybeIdentifierToCategory,
   )
 where
 
@@ -26,10 +26,9 @@ import Data.Coerce (coerce)
 import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.Text as Text
-import Prelude hiding (all)
 
 
--- | Name of a stream.
+-- | Name of a stream. Look into 'categoryOfStream' and 'identifierOfStream' to parse out the category or identifier in the stream name.
 newtype StreamName = StreamName
   { streamNameToText :: Text
   }
@@ -53,44 +52,44 @@ separator = '-'
 {- | A category stream name does not have an ID.
  For example, the stream name for the category of all accounts is "account".
 -}
-newtype CategoryName = CategoryName Text
+newtype Category = Category Text
   deriving (Eq, Ord)
   deriving (Show) via Text
 
 
--- | Converts from a 'CategoryName' to a nromal 'Text'.
-categoryNameToText :: CategoryName -> Text
-categoryNameToText (CategoryName text) =
+-- | Converts from a 'Category' to a normal 'Text'.
+categoryToText :: Category -> Text
+categoryToText (Category text) =
   text
 
 
 {- | Gets the category of a stream.
  For example for "account-123" it would return "account".
 -}
-categoryOfStream :: StreamName -> CategoryName
+categoryOfStream :: StreamName -> Category
 categoryOfStream (StreamName text) =
   case Text.split (== separator) text of
-    (name : _) -> CategoryName name
-    _ -> CategoryName "" -- 'Text.split' never returns an empty list
+    (name : _) -> Category name
+    _ -> Category "" -- 'Text.split' never returns an empty list
 
 
-categoryName :: Text -> CategoryName
-categoryName =
+category :: Text -> Category
+category =
   categoryOfStream . StreamName
 
 
-instance Aeson.ToJSON CategoryName where
-  toJSON = Aeson.toJSON . categoryNameToText
-  toEncoding = Aeson.toEncoding . categoryNameToText
+instance Aeson.ToJSON Category where
+  toJSON = Aeson.toJSON . categoryToText
+  toEncoding = Aeson.toEncoding . categoryToText
 
 
-instance Aeson.FromJSON CategoryName where
-  parseJSON = fmap CategoryName . Aeson.parseJSON
+instance Aeson.FromJSON Category where
+  parseJSON = fmap Category . Aeson.parseJSON
 
 
 -- | The identifier part of a stream name. Anything after the first hypen (-).
-newtype IdentityName = IdentityName
-  { identityNameToText :: Text
+newtype Identifier = Identifier
+  { identifierNameToText :: Text
   }
   deriving (Eq, Ord)
   deriving (Show) via Text
@@ -100,37 +99,37 @@ newtype IdentityName = IdentityName
  For example "account-ed3b4af7-b4a0-499e-8a16-a09763811274" would return Just "ed3b4af7-b4a0-499e-8a16-a09763811274",
  and "account" would return Nothing.
 -}
-identityOfStream :: StreamName -> Maybe IdentityName
-identityOfStream (StreamName text) =
+identifierOfStream :: StreamName -> Maybe Identifier
+identifierOfStream (StreamName text) =
   let separatorText = Text.pack [separator]
       value = Text.intercalate separatorText . drop 1 $ Text.split (== separator) text
    in if Text.null value
         then Nothing
-        else Just $ IdentityName value
+        else Just $ Identifier value
 
 
-{- | Add an identifier to a 'CategoryName'.
- For example category "account" and identity "123" would return "account-123".
+{- | Add an identifier to a 'Category'.
+ For example category "account" and identifier "123" would return "account-123".
 -}
-addIdentityToCategory :: CategoryName -> IdentityName -> StreamName
-addIdentityToCategory (CategoryName categoryText) identityName =
-  StreamName $ categoryText <> Text.singleton separator <> identityNameToText identityName
+addIdentifierToCategory :: Category -> Identifier -> StreamName
+addIdentifierToCategory (Category categoryText) identifierName =
+  StreamName $ categoryText <> Text.singleton separator <> identifierNameToText identifierName
 
 
 -- | Add a maybe identifier, allowing you to add an identifier to the stream name if it is Just.
-addMaybeIdentityToCategory :: CategoryName -> Maybe IdentityName -> StreamName
-addMaybeIdentityToCategory categoryText maybeIdentityName =
-  case maybeIdentityName of
+addMaybeIdentifierToCategory :: Category -> Maybe Identifier -> StreamName
+addMaybeIdentifierToCategory categoryText maybeIdentifier =
+  case maybeIdentifier of
     Nothing ->
       coerce categoryText
-    Just identityName ->
-      addIdentityToCategory categoryText identityName
+    Just identifierName ->
+      addIdentifierToCategory categoryText identifierName
 
 
-instance Aeson.ToJSON IdentityName where
-  toJSON = Aeson.toJSON . identityNameToText
-  toEncoding = Aeson.toEncoding . identityNameToText
+instance Aeson.ToJSON Identifier where
+  toJSON = Aeson.toJSON . identifierNameToText
+  toEncoding = Aeson.toEncoding . identifierNameToText
 
 
-instance Aeson.FromJSON IdentityName where
-  parseJSON = fmap IdentityName . Aeson.parseJSON
+instance Aeson.FromJSON Identifier where
+  parseJSON = fmap Identifier . Aeson.parseJSON

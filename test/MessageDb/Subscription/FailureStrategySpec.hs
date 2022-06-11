@@ -47,7 +47,7 @@ computeInterest canFail withConnection message payload _ = do
     throwString "Something bad happened"
 
   Just identity <-
-    pure . StreamName.identityOfStream $ messageStream message
+    pure . StreamName.identifierOfStream $ messageStream message
 
   void . withConnection $ \connection ->
     Functions.writeMessage
@@ -59,14 +59,14 @@ computeInterest canFail withConnection message payload _ = do
       Nothing
 
 
-failureCategory :: StreamName.CategoryName
+failureCategory :: StreamName.Category
 failureCategory =
-  StreamName.categoryName "failures"
+  StreamName.category "failures"
 
 
 failureStream :: BankAccount.AccountId -> StreamName.StreamName
 failureStream =
-  StreamName.addIdentityToCategory failureCategory . coerce
+  StreamName.addIdentifierToCategory failureCategory . coerce
 
 
 subscribeCommands :: TestApp Subscription
@@ -107,7 +107,7 @@ subscribeFailures = do
   pure $
     subscription
       { Subscription.failureStrategy = FailureStrategy.ignoreFailures
-      , Subscription.categoryName = StreamName.categoryName "failures"
+      , Subscription.categoryName = StreamName.category "failures"
       , Subscription.handlers = handlers
       }
 

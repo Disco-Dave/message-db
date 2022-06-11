@@ -13,13 +13,15 @@ import Data.Foldable (traverse_)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe (fromMaybe)
+import qualified Data.Text as Text
 import Data.Void (Void)
 import MessageDb.Functions ()
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
-import MessageDb.StreamName (CategoryName)
+import MessageDb.StreamName (Category)
+import qualified MessageDb.Subscription.FailedMessage as FailedMessage
 import MessageDb.Subscription.FailureStrategy (FailureStrategy)
 import qualified MessageDb.Subscription.FailureStrategy as FailureStrategy
 import MessageDb.Subscription.PositionStrategy (PositionStrategy)
@@ -29,7 +31,7 @@ import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
 
 -- | Defines how to subscribe to a category.
 data Subscription = Subscription
-  { categoryName :: CategoryName
+  { categoryName :: Category
   , messagesPerTick :: NumberOfMessages
   , tickInterval :: Microseconds
   , logMessages :: NonEmpty Message -> IO ()
@@ -43,7 +45,7 @@ data Subscription = Subscription
 
 
 -- | Construct a new subscription.
-subscribe :: CategoryName -> Subscription
+subscribe :: Category -> Subscription
 subscribe categoryName =
   Subscription
     { categoryName = categoryName
@@ -80,11 +82,13 @@ start withConnection Subscription{..} = do
 
       handle :: Message -> IO ()
       handle message =
-        let logHandleFailure =
-              FailureStrategy.logFailure failureStrategy message . FailureStrategy.HandleFailure
+        let logHandleFailure reason =
+              FailureStrategy.logFailure failureStrategy $
+                FailedMessage.FailedMessage message (FailedMessage.HandleFailure reason)
 
-            logUnknownFailure =
-              FailureStrategy.logFailure failureStrategy message . FailureStrategy.UnknownFailure
+            logUnknownFailure exception =
+              FailureStrategy.logFailure failureStrategy $
+                FailedMessage.FailedMessage message (FailedMessage.UnknownFailure (Text.pack $ show exception))
          in handleAny logUnknownFailure $ do
               result <- Handlers.subscriptionHandle handlers message
               either logHandleFailure pure result

@@ -279,6 +279,27 @@ data ParseMessageFailure = ParseMessageFailure
   , failedMetadataReason :: Maybe String
   }
   deriving (Show, Eq)
+
+
+parseMessageFailureToKeyValues :: Aeson.KeyValue kv => ParseMessageFailure -> [kv]
+parseMessageFailureToKeyValues ParseMessageFailure{..} =
+  [ "failedPayloadReason" .= failedPayloadReason
+  , "failedMetadataReason" .= failedMetadataReason
+  ]
+
+
+instance Aeson.ToJSON ParseMessageFailure where
+  toJSON = Aeson.object . parseMessageFailureToKeyValues
+  toEncoding = Aeson.pairs . mconcat . parseMessageFailureToKeyValues
+
+
+instance Aeson.FromJSON ParseMessageFailure where
+  parseJSON = Aeson.withObject "ParseMessageFailure" $ \object ->
+    ParseMessageFailure
+      <$> object .: "failedPayloadReason"
+      <*> object .: "failedMetadataReason"
+
+
 instance Exception ParseMessageFailure
 
 

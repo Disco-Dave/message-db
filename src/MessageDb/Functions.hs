@@ -36,7 +36,7 @@ import Database.PostgreSQL.Simple.FromRow (RowParser, field, fieldWith)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Message (Message (Message))
 import qualified MessageDb.Message as Message
-import MessageDb.StreamName (CategoryName, StreamName (StreamName), categoryNameToText, streamNameToText)
+import MessageDb.StreamName (Category, StreamName (StreamName), categoryToText, streamNameToText)
 import MessageDb.Units (NumberOfMessages)
 import Numeric.Natural (Natural)
 
@@ -330,7 +330,7 @@ getStreamMessages connection streamName position batchSize condition =
 -- | Retrieve messages from a category of streams, optionally specifying the starting position, the number of messages to retrieve, the correlation category for Pub/Sub, consumer group parameters, and an additional condition that will be appended to the SQL command's WHERE clause.
 getCategoryMessages ::
   Postgres.Connection ->
-  CategoryName ->
+  Category ->
   Maybe Message.GlobalPosition ->
   Maybe BatchSize ->
   Maybe Correlation ->
@@ -360,7 +360,7 @@ getCategoryMessages connection category position batchSize correlation consumerG
           );
         |]
       params =
-        ( categoryNameToText category
+        ( categoryToText category
         , maybe 0 Message.globalPositionToInteger position
         , maybe 1000 batchSizeToInteger batchSize
         , fmap correlationToText correlation

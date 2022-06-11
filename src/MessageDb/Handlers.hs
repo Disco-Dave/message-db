@@ -30,6 +30,7 @@ import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Semigroup
+import GHC.Generics (Generic)
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
 
@@ -38,10 +39,12 @@ import qualified MessageDb.Message as Message
 data HandleError
   = HandlerParseFailure Message.ParseMessageFailure
   | HandlerNotFound
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 
 instance Exception HandleError
+instance Aeson.ToJSON HandleError
+instance Aeson.FromJSON HandleError
 
 
 newtype Handler output = Handler

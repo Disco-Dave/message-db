@@ -1,26 +1,42 @@
 -- | The message type that is written to failure streams when using the 'writeToCategory' 'FailureStrategy'.
 module MessageDb.Subscription.FailedMessage
   ( FailedMessage (..),
+    FailureReason (..),
     messageType,
     handleFailures,
   )
 where
 
+import Control.Exception (Exception)
 import Control.Monad.Except (liftEither)
 import Data.Aeson (KeyValue ((.=)), (.:))
 import qualified Data.Aeson as Aeson
 import Data.Text (Text)
-import MessageDb.Handlers (Handlers)
+import GHC.Generics (Generic)
+import MessageDb.Handlers (HandleError, Handlers)
 import qualified MessageDb.Handlers as Handlers
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
 
 
+-- | Reason why the message handle failed.
+data FailureReason
+  = HandleFailure HandleError
+  | UnknownFailure Text
+  deriving (Show, Eq, Generic)
+
+
+instance Exception FailureReason
+instance Aeson.ToJSON FailureReason
+instance Aeson.FromJSON FailureReason
+
+
 -- | A message that was unable to be handled.
 data FailedMessage = FailedMessage
-  { message :: Message
-  , reason :: Text
+  { failedMessage :: Message
+  , failedReason :: FailureReason
   }
+  deriving (Show, Eq)
 
 
 -- | The message type of a 'FailedMessage'.
@@ -31,8 +47,8 @@ messageType =
 
 toKeyValues :: Aeson.KeyValue keyValue => FailedMessage -> [keyValue]
 toKeyValues FailedMessage{..} =
-  [ "message" .= message
-  , "reason" .= reason
+  [ "message" .= failedMessage
+  , "reason" .= failedReason
   ]
 
 
@@ -43,8 +59,8 @@ instance Aeson.ToJSON FailedMessage where
 
 instance Aeson.FromJSON FailedMessage where
   parseJSON = Aeson.withObject "FailedMessage" $ \object -> do
-    message <- object .: "message"
-    reason <- object .: "reason"
+    failedMessage <- object .: "message"
+    failedReason <- object .: "reason"
     pure $ FailedMessage{..}
 
 
@@ -55,6 +71,6 @@ handleFailures :: Handlers output -> Handlers output
 handleFailures originalHandlers =
   let failedMessageHandle = do
         Message.ParsedMessage{parsedPayload} <- Handlers.getParsedMessage @FailedMessage @Message.Metadata
-        let originalMessage = message parsedPayload
+        let originalMessage = failedMessage parsedPayload
          in liftEither $ Handlers.handle originalHandlers originalMessage
    in Handlers.addHandler messageType failedMessageHandle Handlers.emptyHandlers

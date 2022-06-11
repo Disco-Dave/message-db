@@ -3,7 +3,7 @@ module MessageDb.StreamNameSpec
   )
 where
 
-import Generators.StreamName (genCategoryName, genIdentityName, genStreamName)
+import Generators.StreamName (genCategory, genIdentifier, genStreamName)
 import Hedgehog (forAll, (===))
 import MessageDb.StreamName (StreamName (..))
 import qualified MessageDb.StreamName as StreamName
@@ -18,30 +18,30 @@ spec = do
     it "can be serialized and deserialized from json" . hedgehog $
       jsonRoundtrip genStreamName
 
-  describe "CategoryName" $ do
+  describe "Category" $ do
     it "can be serialized and deserialized from json" . hedgehog $
-      jsonRoundtrip genCategoryName
+      jsonRoundtrip genCategory
 
-    it "can be added to an identity name" . hedgehog $ do
-      categoryName <- forAll genCategoryName
-      identityName <- forAll genIdentityName
+    it "can be added to an identifier" . hedgehog $ do
+      categoryName <- forAll genCategory
+      identityName <- forAll genIdentifier
 
-      let streamName = StreamName.addIdentityToCategory categoryName identityName
+      let streamName = StreamName.addIdentifierToCategory categoryName identityName
        in StreamName.categoryOfStream streamName === categoryName
 
-  describe "IdentityName" $ do
+  describe "Identifier" $ do
     it "can be serialized and deserialized from json" . hedgehog $
-      jsonRoundtrip genIdentityName
+      jsonRoundtrip genIdentifier
 
     it "can be added to a category name" . hedgehog $ do
-      categoryName <- forAll genCategoryName
-      identityName <- forAll genIdentityName
+      categoryName <- forAll genCategory
+      identityName <- forAll genIdentifier
 
-      let streamName = StreamName.addIdentityToCategory categoryName identityName
-       in StreamName.identityOfStream streamName === Just identityName
+      let streamName = StreamName.addIdentifierToCategory categoryName identityName
+       in StreamName.identifierOfStream streamName === Just identityName
 
-    it "identity is nothing when not present" . hedgehog $ do
-      categoryName <- forAll genCategoryName
+    it "identifier is nothing when not present" . hedgehog $ do
+      categoryName <- forAll genCategory
 
-      let streamName = StreamName $ StreamName.categoryNameToText categoryName
-       in StreamName.identityOfStream streamName === Nothing
+      let streamName = StreamName $ StreamName.categoryToText categoryName
+       in StreamName.identifierOfStream streamName === Nothing

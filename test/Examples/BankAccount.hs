@@ -63,10 +63,11 @@ import MessageDb.Message (Message (..))
 import qualified MessageDb.Message as Message
 import MessageDb.Projection (Projected, Projection (Projection, handlers))
 import qualified MessageDb.Projection as Projection
-import MessageDb.StreamName (CategoryName, StreamName)
+import MessageDb.StreamName (Category, StreamName)
 import qualified MessageDb.StreamName as StreamName
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
+import MessageDb.Subscription.FailedMessage (FailedMessage (FailedMessage, failedReason))
 import MessageDb.Subscription.FailureStrategy (FailureStrategy (..))
 import TestApp (TestApp, TestAppData (TestAppData, connectionPool))
 import qualified TestApp
@@ -116,7 +117,7 @@ newAccountId = do
 
 
 -- | Category of bank account commands.
-commandCategory :: CategoryName
+commandCategory :: Category
 commandCategory =
   StreamName.categoryOfStream "bankAccount:command"
 
@@ -124,11 +125,11 @@ commandCategory =
 -- | Stream that you write commands for a specific bank account to.
 commandStream :: AccountId -> StreamName
 commandStream =
-  StreamName.addIdentityToCategory commandCategory . coerce
+  StreamName.addIdentifierToCategory commandCategory . coerce
 
 
 -- | Category of bank account events.
-entityCategory :: CategoryName
+entityCategory :: Category
 entityCategory =
   StreamName.categoryOfStream "bankAccount"
 
@@ -136,7 +137,7 @@ entityCategory =
 -- | The source of truth for a specific bank account. This is a stream of events from processing commands.
 entityStream :: AccountId -> StreamName
 entityStream =
-  StreamName.addIdentityToCategory entityCategory . coerce
+  StreamName.addIdentifierToCategory entityCategory . coerce
 
 
 -- | The minimum balance needed to keep an account open.
@@ -540,7 +541,7 @@ handleCommand ::
   Handlers.SubscriptionHandler
 handleCommand runInIO processCommand =
   Handlers.subscriptionHandler @_ @Message.Metadata $ \Message{messageStream, messageGlobalPosition} command _ -> do
-    Just accountId <- pure . coerce $ StreamName.identityOfStream messageStream
+    Just accountId <- pure . coerce $ StreamName.identifierOfStream messageStream
 
     let targetStream = entityStream accountId
 
@@ -580,7 +581,7 @@ handleCommand runInIO processCommand =
 
 
 {- | Subscribe to the 'BankAccount's command stream. You'd use 'Subscription.start' to start this subscription.
- 'subscribe' alongside 'handleCommand' demostrate how it's possible to construct a subscription that uses a monad other than IO. 
+ 'subscribe' alongside 'handleCommand' demostrate how it's possible to construct a subscription that uses a monad other than IO.
 -}
 subscribe :: TestApp Subscription
 subscribe =
@@ -590,7 +591,7 @@ subscribe =
         { Subscription.failureStrategy =
             -- This is a bad idea for production code. This is here because I want to crash the test if an exception occurred.
             -- Look at 'MessageDb.Subscription.FailureStrategy' for different ways to handle this.
-            FailureStrategy $ \_ reason -> throwIO reason
+            FailureStrategy $ \FailedMessage{failedReason} -> throwIO failedReason
         , Subscription.handlers =
             Handlers.listToHandlers
               [ (Message.messageTypeOf @Open, handleCommand runInIO (\m p -> pure $ open m p))

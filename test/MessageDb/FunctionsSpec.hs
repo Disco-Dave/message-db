@@ -11,7 +11,7 @@ import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Time as Time
 import qualified Database.PostgreSQL.Simple as Simple
 import Generators.Message (genGlobalPosition, genMessageType, genMetadata, genPayload)
-import Generators.StreamName (genCategoryName, genIdentityName, genStreamName)
+import Generators.StreamName (genCategory, genIdentifier, genStreamName)
 import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
@@ -430,7 +430,7 @@ spec =
 
     describe "getCategoryMessages" $ do
       it "returns empty list when no messages exist in category" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
+        categoryName <- Gen.sample genCategory
 
         messages <-
           Functions.getCategoryMessages
@@ -445,9 +445,9 @@ spec =
         messages `shouldBe` []
 
       it "returns messages when there are messages in the category" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
-        identityName <- Gen.sample genIdentityName
-        let streamName = StreamName.addIdentityToCategory categoryName identityName
+        categoryName <- Gen.sample genCategory
+        identityName <- Gen.sample genIdentifier
+        let streamName = StreamName.addIdentifierToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -481,9 +481,9 @@ spec =
           Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns messages after specified position" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
-        identityName <- Gen.sample genIdentityName
-        let streamName = StreamName.addIdentityToCategory categoryName identityName
+        categoryName <- Gen.sample genCategory
+        identityName <- Gen.sample genIdentifier
+        let streamName = StreamName.addIdentifierToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -517,9 +517,9 @@ spec =
           Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns up to 1000 messages when batch size is not specified" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
-        identityName <- Gen.sample genIdentityName
-        let streamName = StreamName.addIdentityToCategory categoryName identityName
+        categoryName <- Gen.sample genCategory
+        identityName <- Gen.sample genIdentifier
+        let streamName = StreamName.addIdentifierToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -544,9 +544,9 @@ spec =
         length messages `shouldBe` 1000
 
       it "returns less than or equal to batch size of messages" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
-        identityName <- Gen.sample genIdentityName
-        let streamName = StreamName.addIdentityToCategory categoryName identityName
+        categoryName <- Gen.sample genCategory
+        identityName <- Gen.sample genIdentifier
+        let streamName = StreamName.addIdentifierToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -634,9 +634,9 @@ spec =
           Message.messageMetadata message `shouldBe` fromMaybe Message.nullMetadata metadata
 
       it "returns everything when a batch size of unlimited is specified" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
-        identityName <- Gen.sample genIdentityName
-        let streamName = StreamName.addIdentityToCategory categoryName identityName
+        categoryName <- Gen.sample genCategory
+        identityName <- Gen.sample genIdentifier
+        let streamName = StreamName.addIdentifierToCategory categoryName identityName
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -663,7 +663,7 @@ spec =
         length messages `shouldBe` 1001
 
       it "returns correct messages when consumer group is used" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
+        categoryName <- Gen.sample genCategory
         messageType <- Gen.sample genMessageType
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
@@ -681,8 +681,8 @@ spec =
                 }
 
         replicateM_ 100 $ do
-          identityName <- Gen.sample genIdentityName
-          let streamName = StreamName.addIdentityToCategory categoryName identityName
+          identityName <- Gen.sample genIdentifier
+          let streamName = StreamName.addIdentifierToCategory categoryName identityName
           Functions.writeMessage
             connection
             streamName
@@ -722,9 +722,9 @@ spec =
         group1Set `shouldNotBe` group2Set
 
       it "returns messages that match the condition when specified" $ \connection -> do
-        categoryName <- Gen.sample genCategoryName
-        identityName <- Gen.sample genIdentityName
-        let streamName = StreamName.addIdentityToCategory categoryName identityName
+        categoryName <- Gen.sample genCategory
+        identityName <- Gen.sample genIdentifier
+        let streamName = StreamName.addIdentifierToCategory categoryName identityName
         payload <- Gen.sample genPayload
         metadata <- Gen.sample $ Gen.maybe genMetadata
 
