@@ -5,7 +5,7 @@ import Control.Monad.Reader.Class (MonadReader (ask))
 import Data.Function ((&))
 import qualified Data.Pool as Pool
 import qualified Data.Set as Set
-import Examples.BankAccount (BankAccount (BankAccount))
+import Examples.BankAccount (BankAccount)
 import qualified Examples.BankAccount as BankAccount
 import qualified MessageDb.Functions as Functions
 import MessageDb.Handlers (ProjectionHandlers)
@@ -81,16 +81,12 @@ spec =
 
       let bankAccount = Projection.state projectedAccount
           commandsProcessed = BankAccount.commandsProcessed bankAccount
-          expectedBankAccount =
-            BankAccount
-              { balance = 134
-              , isOpened = True
-              , overdrafts = []
-              , commandsProcessed = Set.fromList [1 .. 5]
-              }
 
       length commandsProcessed `shouldBe` 5
-      bankAccount `shouldBe` expectedBankAccount
+      BankAccount.balance bankAccount `shouldBe` 134
+      BankAccount.isOpened bankAccount `shouldBe` True
+      BankAccount.overdrafts bankAccount `shouldBe` []
+      Set.size (BankAccount.commandsProcessed bankAccount) `shouldBe` 5
       Projection.version projectedAccount `shouldBe` Functions.DoesExist 4
       Projection.versionIncludingUnprocessed projectedAccount `shouldBe` Functions.DoesExist 4
       Projection.unprocessed projectedAccount `shouldBe` []
