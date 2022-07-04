@@ -25,7 +25,6 @@ import Data.Bifunctor (Bifunctor (first))
 import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
 import Data.Functor ((<&>))
-import Data.Functor.Compose (Compose (..))
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.String (IsString)
@@ -225,10 +224,10 @@ fetchWithSnapshots ::
   Functions.WithConnection ->
   Functions.BatchSize ->
   StreamName ->
-  SnapshotStreamName ->
   Projection state ->
+  SnapshotStreamName ->
   IO (Maybe (Projected state))
-fetchWithSnapshots withConnection batchSize streamName snapshotStreamName projection = do
+fetchWithSnapshots withConnection batchSize streamName projection snapshotStreamName  = do
   previousSnapshotResult <- retrieveSnapshot @state withConnection snapshotStreamName
 
   fetchResult <-

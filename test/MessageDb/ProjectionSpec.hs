@@ -82,8 +82,8 @@ fetchWithSnapshots accountId = do
       (Pool.withResource connectionPool)
       (Functions.FixedSize 100)
       (BankAccount.entityStream accountId)
-      (snapshotStream accountId)
       modifiedProjection
+      (snapshotStream accountId)
 
 
 spec :: Spec
@@ -133,10 +133,19 @@ spec =
       let countMessagesProcessed =
             Set.size . messagesProcessed . Projection.state
 
+          hasCorrectState projection = do
+            let actualState = bankAccount $ Projection.state projection
+
+            Set.size (BankAccount.commandsProcessed actualState) `shouldBe` 5
+            BankAccount.balance actualState `shouldBe` 134
+            BankAccount.isOpened actualState `shouldBe` True
+            BankAccount.overdrafts actualState `shouldBe` []
+
       countMessagesProcessed firstProjection `shouldBe` 5
       countMessagesProcessed secondProjection `shouldBe` 0
 
-      bankAccount (Projection.state firstProjection) `shouldBe` bankAccount (Projection.state secondProjection)
+      hasCorrectState firstProjection
+      hasCorrectState secondProjection
 
       Projection.version firstProjection `shouldBe` Functions.DoesExist 4
       Projection.version secondProjection `shouldBe` Functions.DoesExist 4
