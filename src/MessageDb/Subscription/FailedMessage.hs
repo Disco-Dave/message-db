@@ -1,9 +1,9 @@
 -- | The message type that is written to failure streams when using the 'writeToCategory' 'FailureStrategy'.
 module MessageDb.Subscription.FailedMessage
-  ( FailedMessage (..),
-    FailureReason (..),
-    messageType,
-    handleFailures,
+  ( FailedMessage (..)
+  , FailureReason (..)
+  , messageType
+  , handleFailures
   )
 where
 

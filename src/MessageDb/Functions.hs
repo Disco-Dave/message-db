@@ -2,22 +2,22 @@
 
 -- | Provides access to the functions described at http://docs.eventide-project.org/user-guide/message-db/server-functions.html
 module MessageDb.Functions
-  ( WithConnection,
-    BatchSize (..),
-    Condition (..),
-    ConsumerGroup (..),
-    Correlation (..),
-    StreamVersion (..),
-    ExpectedVersion (..),
-    ExpectedVersionViolation (..),
-    parseExpectedVersionViolation,
-    lookupById,
-    lookupByPosition,
-    writeMessage,
-    getStreamMessages,
-    getCategoryMessages,
-    getLastStreamMessage,
-    streamVersion,
+  ( WithConnection
+  , BatchSize (..)
+  , Condition (..)
+  , ConsumerGroup (..)
+  , Correlation (..)
+  , StreamVersion (..)
+  , ExpectedVersion (..)
+  , ExpectedVersionViolation (..)
+  , parseExpectedVersionViolation
+  , lookupById
+  , lookupByPosition
+  , writeMessage
+  , getStreamMessages
+  , getCategoryMessages
+  , getLastStreamMessage
+  , streamVersion
   )
 where
 

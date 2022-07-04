@@ -1,25 +1,25 @@
 module MessageDb.Handlers
-  ( HandleError (..),
-    Handler (..),
-    runHandler,
-    getMessage,
-    getParsedMessage,
-    Handlers,
-    emptyHandlers,
-    listToHandlers,
-    addHandler,
-    removeHandler,
-    handle,
-    ProjectionHandler,
-    projectionHandler,
-    ProjectionHandlers,
-    addProjectionHandler,
-    projectionHandle,
-    SubscriptionHandler,
-    subscriptionHandler,
-    SubscriptionHandlers,
-    addSubscriptionHandler,
-    subscriptionHandle,
+  ( HandleError (..)
+  , Handler (..)
+  , runHandler
+  , getMessage
+  , getParsedMessage
+  , Handlers
+  , emptyHandlers
+  , listToHandlers
+  , addHandler
+  , removeHandler
+  , handle
+  , ProjectionHandler
+  , projectionHandler
+  , ProjectionHandlers
+  , addProjectionHandler
+  , projectionHandle
+  , SubscriptionHandler
+  , subscriptionHandler
+  , SubscriptionHandlers
+  , addSubscriptionHandler
+  , subscriptionHandle
   )
 where
 

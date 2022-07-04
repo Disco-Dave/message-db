@@ -1,5 +1,5 @@
 module MessageDb.FunctionsSpec
-  ( spec,
+  ( spec
   )
 where
 

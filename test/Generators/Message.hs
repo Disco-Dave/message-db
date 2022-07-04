@@ -1,12 +1,12 @@
 module Generators.Message
-  ( genMessageId,
-    genMessageType,
-    genStreamPosition,
-    genGlobalPosition,
-    genPayload,
-    genMetadata,
-    genCreatedAtTimestamp,
-    genMessage,
+  ( genMessageId
+  , genMessageType
+  , genStreamPosition
+  , genGlobalPosition
+  , genPayload
+  , genMetadata
+  , genCreatedAtTimestamp
+  , genMessage
   )
 where
 

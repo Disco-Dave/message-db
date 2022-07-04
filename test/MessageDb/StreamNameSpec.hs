@@ -1,5 +1,5 @@
 module MessageDb.StreamNameSpec
-  ( spec,
+  ( spec
   )
 where
 

@@ -165,7 +165,6 @@ spec =
 
       length snapshots `shouldBe` 1
 
-
     it "works when there are more message since snapshot" $ \testAppData -> do
       accountId <- BankAccount.newAccountId
 

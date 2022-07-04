@@ -1,5 +1,5 @@
 module Properties
-  ( jsonRoundtrip,
+  ( jsonRoundtrip
   )
 where
 

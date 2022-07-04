@@ -9,15 +9,15 @@
  Read more at: http://docs.eventide-project.org/core-concepts/streams
 -}
 module MessageDb.StreamName
-  ( StreamName (..),
-    Category,
-    categoryOfStream,
-    categoryToText,
-    category,
-    Identifier (..),
-    identifierOfStream,
-    addIdentifierToCategory,
-    addMaybeIdentifierToCategory,
+  ( StreamName (..)
+  , Category
+  , categoryOfStream
+  , categoryToText
+  , category
+  , Identifier (..)
+  , identifierOfStream
+  , addIdentifierToCategory
+  , addMaybeIdentifierToCategory
   )
 where
 

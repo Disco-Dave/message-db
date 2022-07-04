@@ -1,21 +1,21 @@
 module MessageDb.Message
-  ( MessageId (..),
-    newMessageId,
-    MessageType (..),
-    messageTypeOf,
-    StreamPosition (..),
-    GlobalPosition (..),
-    CreatedAt (..),
-    Payload (..),
-    nullPayload,
-    parsePayload,
-    Metadata (..),
-    nullMetadata,
-    parseMetadata,
-    Message (..),
-    ParseMessageFailure (..),
-    ParsedMessage (..),
-    parseMessage,
+  ( MessageId (..)
+  , newMessageId
+  , MessageType (..)
+  , messageTypeOf
+  , StreamPosition (..)
+  , GlobalPosition (..)
+  , CreatedAt (..)
+  , Payload (..)
+  , nullPayload
+  , parsePayload
+  , Metadata (..)
+  , nullMetadata
+  , parseMetadata
+  , Message (..)
+  , ParseMessageFailure (..)
+  , ParsedMessage (..)
+  , parseMessage
   )
 where
 

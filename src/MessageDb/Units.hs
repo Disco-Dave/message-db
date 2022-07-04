@@ -1,7 +1,7 @@
 -- | Different units of measures use throughout the library.
 module MessageDb.Units
-  ( NumberOfMessages (..),
-    Microseconds (..),
+  ( NumberOfMessages (..)
+  , Microseconds (..)
   )
 where
 

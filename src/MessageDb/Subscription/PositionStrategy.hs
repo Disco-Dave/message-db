@@ -1,12 +1,12 @@
 -- | Strategies for saving subscription position.
 module MessageDb.Subscription.PositionStrategy
-  ( LastPositionSaved,
-    CurrentPosition,
-    PositionSaved,
-    PositionStrategy (..),
-    dontSave,
-    PositionUpdateInterval (..),
-    writeToStream,
+  ( LastPositionSaved
+  , CurrentPosition
+  , PositionSaved
+  , PositionStrategy (..)
+  , dontSave
+  , PositionUpdateInterval (..)
+  , writeToStream
   )
 where
 
@@ -22,7 +22,9 @@ import Numeric.Natural (Natural)
 
 type LastPositionSaved = Message.GlobalPosition
 
+
 type CurrentPosition = Message.GlobalPosition
+
 
 type PositionSaved = Message.GlobalPosition
 

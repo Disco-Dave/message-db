@@ -1,7 +1,7 @@
 module Generators.StreamName
-  ( genIdentifier,
-    genCategory,
-    genStreamName,
+  ( genIdentifier
+  , genCategory
+  , genStreamName
   )
 where
 

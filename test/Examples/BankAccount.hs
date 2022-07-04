@@ -3,41 +3,41 @@
 {-# HLINT ignore "Replace case with maybe" #-}
 
 module Examples.BankAccount
-  ( Money (..),
-    AccountId (..),
-    AccountMetadata (..),
-    Open (..),
-    Opened (..),
-    OpenRejectedReason (..),
-    OpenRejected (..),
-    Close (..),
-    Closed (..),
-    CloseRejectedReason (..),
-    CloseRejected (..),
-    Deposit (..),
-    Deposited (..),
-    DepositRejectedReason (..),
-    DepositRejected (..),
-    Withdraw (..),
-    Withdrawn (..),
-    WithdrawRejectedReason (..),
-    WithdrawRejected (..),
-    Overdraft (..),
-    BankAccount (..),
-    newAccountId,
-    commandCategory,
-    commandStream,
-    entityCategory,
-    entityStream,
-    projection,
-    open,
-    close,
-    deposit,
-    withdraw,
-    subscribe,
-    send,
-    markAsProcessed,
-    fetch,
+  ( Money (..)
+  , AccountId (..)
+  , AccountMetadata (..)
+  , Open (..)
+  , Opened (..)
+  , OpenRejectedReason (..)
+  , OpenRejected (..)
+  , Close (..)
+  , Closed (..)
+  , CloseRejectedReason (..)
+  , CloseRejected (..)
+  , Deposit (..)
+  , Deposited (..)
+  , DepositRejectedReason (..)
+  , DepositRejected (..)
+  , Withdraw (..)
+  , Withdrawn (..)
+  , WithdrawRejectedReason (..)
+  , WithdrawRejected (..)
+  , Overdraft (..)
+  , BankAccount (..)
+  , newAccountId
+  , commandCategory
+  , commandStream
+  , entityCategory
+  , entityStream
+  , projection
+  , open
+  , close
+  , deposit
+  , withdraw
+  , subscribe
+  , send
+  , markAsProcessed
+  , fetch
   )
 where
 

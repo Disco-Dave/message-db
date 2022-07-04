@@ -27,6 +27,16 @@ jobs:
           path: '["src/", "test/"]'
           fail-on: warning
 
+  fourmolu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: fourmolu/fourmolu-action@v2
+        with:
+          pattern: |
+            src/**/*.hs
+            test/**/*.hs
+
   cabal:
     name: cabal ${{ matrix.cabal }} / ghc ${{ matrix.ghc }}
     runs-on: ${{ matrix.os }}
@@ -70,7 +80,6 @@ jobs:
 
       - name: "Setup system dependencies"
         uses: "./.github/actions/setup-system-dependencies"
-
 
       - uses: "./.github/actions/stack-build"
         name: Build

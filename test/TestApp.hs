@@ -1,13 +1,13 @@
 module TestApp
-  ( TestAppData (..),
-    withTestAppData,
-    TestApp (..),
-    runWith,
-    run,
-    withConnection,
-    withSubscriptions,
-    blockUntilStreamHas,
-    blockUntilCategoryHas,
+  ( TestAppData (..)
+  , withTestAppData
+  , TestApp (..)
+  , runWith
+  , run
+  , withConnection
+  , withSubscriptions
+  , blockUntilStreamHas
+  , blockUntilCategoryHas
   )
 where
 

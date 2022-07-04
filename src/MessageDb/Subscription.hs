@@ -1,8 +1,8 @@
 -- | Subscribe to a category and react to the messages.
 module MessageDb.Subscription
-  ( Subscription (..),
-    subscribe,
-    start,
+  ( Subscription (..)
+  , subscribe
+  , start
   )
 where
 
