@@ -24,6 +24,8 @@ import qualified Data.Aeson as Aeson
 import Data.Bifunctor (Bifunctor (first))
 import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
+import Data.Functor ((<&>))
+import Data.Functor.Compose (Compose (..))
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.String (IsString)
@@ -113,7 +115,7 @@ project messages =
 
 
 -- | Query a stream and project the messages.
-fetch ::
+fetch' ::
   forall state.
   Functions.WithConnection ->
   Functions.BatchSize ->
@@ -121,7 +123,7 @@ fetch ::
   Message.StreamPosition ->
   Projection state ->
   IO (Maybe (Projected state))
-fetch withConnection batchSize streamName startingPosition projection =
+fetch' withConnection batchSize streamName startingPosition projection =
   let query position projected@Projected{state, unprocessed} = do
         messages <- withConnection $ \connection ->
           Functions.getStreamMessages connection streamName (Just position) (Just batchSize) Nothing
@@ -147,15 +149,27 @@ fetch withConnection batchSize streamName startingPosition projection =
                  in query nextPosition updatedProjectedState
           _ ->
             pure $
-              if position <= startingPosition
+              if position <= 0
                 then Nothing
                 else Just projected
    in fmap reverseUnprocessed <$> query startingPosition (empty $ initial projection)
 
 
+-- | Query a stream and project the messages.
+fetch ::
+  forall state.
+  Functions.WithConnection ->
+  Functions.BatchSize ->
+  StreamName ->
+  Projection state ->
+  IO (Maybe (Projected state))
+fetch withConnection batchSize streamName projection =
+  fetch' withConnection batchSize streamName 0 projection
+
+
 data Snapshot state = Snapshot
   { snapshotState :: state
-  , snapshotPosition :: Message.StreamPosition
+  , snapshotSavedPosition :: Message.StreamPosition
   , snapshotVersion :: Message.StreamPosition
   }
 
@@ -184,7 +198,7 @@ retrieveSnapshot withConnection streamName =
     pure $
       Snapshot
         { snapshotState = parsedPayload
-        , snapshotPosition = parsedMetadata
+        , snapshotSavedPosition = parsedMetadata
         , snapshotVersion = Message.messageStreamPosition message
         }
 
@@ -218,10 +232,10 @@ fetchWithSnapshots withConnection batchSize streamName snapshotStreamName projec
   previousSnapshotResult <- retrieveSnapshot @state withConnection snapshotStreamName
 
   fetchResult <-
-    uncurry (fetch @state withConnection batchSize streamName) $
+    uncurry (fetch' @state withConnection batchSize streamName) $
       case previousSnapshotResult of
         Just (Right Snapshot{..}) ->
-          (snapshotPosition + 1, projection{initial = snapshotState})
+          (snapshotSavedPosition + 1, projection{initial = snapshotState})
         _ ->
           (0, projection)
 
@@ -239,8 +253,19 @@ fetchWithSnapshots withConnection batchSize streamName snapshotStreamName projec
            in recordSnapshot withConnection snapshotStreamName state updatedSnapshotVersion expectedVersion
     _ -> pure ()
 
-  pure $ case previousSnapshotResult of
-    (Just (Left err)) ->
-      fmap (\p -> p{unprocessed = err : unprocessed p}) fetchResult
-    _ ->
-      fetchResult
+  pure $
+    fetchResult <&> \p ->
+      let updatedUnprocessed =
+            case previousSnapshotResult of
+              (Just (Left err)) ->
+                err : unprocessed p
+              _ ->
+                unprocessed p
+
+          correctedVersion =
+            case (previousSnapshotResult, version p) of
+              (Just (Right Snapshot{snapshotSavedPosition}), Functions.DoesNotExist) ->
+                Functions.DoesExist snapshotSavedPosition
+              _ ->
+                version p
+       in p{unprocessed = updatedUnprocessed, version = correctedVersion}

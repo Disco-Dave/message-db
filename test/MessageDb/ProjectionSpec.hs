@@ -112,3 +112,46 @@ spec =
               Nothing
 
       length snapshots `shouldBe` 1
+
+    it "doesn't write the same snapshot twice" $ \testAppData -> do
+      accountId <- BankAccount.newAccountId
+
+      Just firstProjection <-
+        TestApp.runWith testAppData $ do
+          BankAccount.send accountId (BankAccount.Open 200)
+          BankAccount.send accountId (BankAccount.Open 202)
+          BankAccount.send accountId (BankAccount.Deposit 20)
+          BankAccount.send accountId (BankAccount.Deposit 14)
+          BankAccount.send accountId (BankAccount.Withdraw 100)
+          TestApp.blockUntilStreamHas (BankAccount.entityStream accountId) 5
+          fetchWithSnapshots accountId
+
+      Just secondProjection <-
+        TestApp.runWith testAppData $
+          fetchWithSnapshots accountId
+
+      let countMessagesProcessed =
+            Set.size . messagesProcessed . Projection.state
+
+      countMessagesProcessed firstProjection `shouldBe` 5
+      countMessagesProcessed secondProjection `shouldBe` 0
+
+      bankAccount (Projection.state firstProjection) `shouldBe` bankAccount (Projection.state secondProjection)
+
+      Projection.version firstProjection `shouldBe` Functions.DoesExist 4
+      Projection.version secondProjection `shouldBe` Functions.DoesExist 4
+
+      Projection.unprocessed firstProjection `shouldBe` []
+      Projection.unprocessed secondProjection `shouldBe` []
+
+      snapshots <-
+        TestApp.runWith testAppData . TestApp.withConnection $ \connection ->
+          liftIO $
+            Functions.getStreamMessages
+              connection
+              (coerce $ snapshotStream accountId)
+              Nothing
+              Nothing
+              Nothing
+
+      length snapshots `shouldBe` 1
