@@ -254,17 +254,10 @@ fetchWithSnapshots withConnection batchSize streamName projection snapshotStream
 
   pure $
     fetchResult <&> \p ->
-      let updatedUnprocessed =
-            case previousSnapshotResult of
-              (Just (Left err)) ->
-                err : unprocessed p
-              _ ->
-                unprocessed p
-
-          correctedVersion =
+      let correctedVersion =
             case (previousSnapshotResult, version p) of
               (Just (Right Snapshot{snapshotSavedPosition}), Functions.DoesNotExist) ->
                 Functions.DoesExist snapshotSavedPosition
               _ ->
                 version p
-       in p{unprocessed = updatedUnprocessed, version = correctedVersion}
+       in p{version = correctedVersion}
