@@ -162,8 +162,8 @@ fetch ::
   StreamName ->
   Projection state ->
   IO (Maybe (Projected state))
-fetch withConnection batchSize streamName projection =
-  fetch' withConnection batchSize streamName 0 projection
+fetch withConnection batchSize streamName =
+  fetch' withConnection batchSize streamName 0
 
 
 data Snapshot state = Snapshot
@@ -227,7 +227,7 @@ fetchWithSnapshots ::
   Projection state ->
   SnapshotStreamName ->
   IO (Maybe (Projected state))
-fetchWithSnapshots withConnection batchSize streamName projection snapshotStreamName  = do
+fetchWithSnapshots withConnection batchSize streamName projection snapshotStreamName = do
   previousSnapshotResult <- retrieveSnapshot @state withConnection snapshotStreamName
 
   fetchResult <-
