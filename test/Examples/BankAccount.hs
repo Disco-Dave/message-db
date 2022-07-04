@@ -151,7 +151,11 @@ data Overdraft = Overdraft
   { overdraftAmount :: Money
   , overdraftTime :: UTCTime
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+
+instance Aeson.ToJSON Overdraft
+instance Aeson.FromJSON Overdraft
 
 
 -- Aggregation of all bank account events in the 'entityStream'.
@@ -161,7 +165,11 @@ data BankAccount = BankAccount
   , overdrafts :: [Overdraft]
   , commandsProcessed :: Set Message.GlobalPosition
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+
+instance Aeson.ToJSON BankAccount
+instance Aeson.FromJSON BankAccount
 
 
 addCommandPosition :: Message.Metadata -> Set Message.GlobalPosition -> Set Message.GlobalPosition

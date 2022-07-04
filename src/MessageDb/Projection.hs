@@ -163,7 +163,7 @@ data Snapshot state = Snapshot
 newtype SnapshotStreamName = SnapshotStreamName
   { fromSnapshotStreamName :: StreamName
   }
-  deriving (Show, Eq, Ord, IsString)
+  deriving (Show, Eq, Ord, IsString, Semigroup)
 
 
 retrieveSnapshot :: Aeson.FromJSON state => Functions.WithConnection -> SnapshotStreamName -> IO (Maybe (Either UnprocessedMessage (Snapshot state)))
@@ -214,7 +214,7 @@ fetchWithSnapshots ::
   SnapshotStreamName ->
   Projection state ->
   IO (Maybe (Projected state))
-fetchWithSnapshots withConnection batchSize streamName snapshotStreamName projection  = do
+fetchWithSnapshots withConnection batchSize streamName snapshotStreamName projection = do
   previousSnapshotResult <- retrieveSnapshot @state withConnection snapshotStreamName
 
   fetchResult <-
@@ -241,6 +241,6 @@ fetchWithSnapshots withConnection batchSize streamName snapshotStreamName projec
 
   pure $ case previousSnapshotResult of
     (Just (Left err)) ->
-      fmap (\p -> p{unprocessed = err : (unprocessed p)}) fetchResult
+      fmap (\p -> p{unprocessed = err : unprocessed p}) fetchResult
     _ ->
       fetchResult

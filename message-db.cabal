@@ -110,6 +110,7 @@ test-suite message-db-test
       Generators.Message
       Generators.StreamName
       MessageDb.FunctionsSpec
+      MessageDb.ProjectionSpec
       MessageDb.StreamNameSpec
       MessageDb.Subscription.FailureStrategySpec
       MessageDb.Subscription.PositionStrategySpec
