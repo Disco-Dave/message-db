@@ -1,9 +1,11 @@
+{- FOURMOLU_DISABLE -}
+
 {-# LANGUAGE CPP #-}
 
 module Generators
-  ( genUUID,
-    genUTCTime,
-    genAesonValue,
+  ( genUUID
+  , genUTCTime
+  , genAesonValue
   )
 where
 
