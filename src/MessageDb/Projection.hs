@@ -7,13 +7,26 @@ module MessageDb.Projection
     versionIncludingUnprocessed,
     project,
     fetch,
+    SnapshotStreamName (..),
+    fetchWithSnapshots,
   )
 where
 
 import Control.Exception (Exception)
+import Control.Exception.Safe (handle)
+import Control.Monad (void)
+import Control.Monad.Except (liftEither)
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Trans.Class (MonadTrans (lift))
+import Control.Monad.Trans.Except (runExceptT)
+import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
+import qualified Data.Aeson as Aeson
+import Data.Bifunctor (Bifunctor (first))
+import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NonEmpty
+import Data.String (IsString)
 import qualified MessageDb.Functions as Functions
 import MessageDb.Handlers (HandleError (..))
 import qualified MessageDb.Handlers as Handlers
@@ -100,8 +113,15 @@ project messages =
 
 
 -- | Query a stream and project the messages.
-fetch :: forall state. Functions.WithConnection -> Functions.BatchSize -> StreamName -> Projection state -> IO (Maybe (Projected state))
-fetch withConnection batchSize streamName projection =
+fetch ::
+  forall state.
+  Functions.WithConnection ->
+  Functions.BatchSize ->
+  StreamName ->
+  Message.StreamPosition ->
+  Projection state ->
+  IO (Maybe (Projected state))
+fetch withConnection batchSize streamName startingPosition projection =
   let query position projected@Projected{state, unprocessed} = do
         messages <- withConnection $ \connection ->
           Functions.getStreamMessages connection streamName (Just position) (Just batchSize) Nothing
@@ -127,7 +147,100 @@ fetch withConnection batchSize streamName projection =
                  in query nextPosition updatedProjectedState
           _ ->
             pure $
-              if position <= 0
+              if position <= startingPosition
                 then Nothing
                 else Just projected
-   in fmap reverseUnprocessed <$> query 0 (empty $ initial projection)
+   in fmap reverseUnprocessed <$> query startingPosition (empty $ initial projection)
+
+
+data Snapshot state = Snapshot
+  { snapshotState :: state
+  , snapshotPosition :: Message.StreamPosition
+  , snapshotVersion :: Message.StreamPosition
+  }
+
+
+newtype SnapshotStreamName = SnapshotStreamName
+  { fromSnapshotStreamName :: StreamName
+  }
+  deriving (Show, Eq, Ord, IsString)
+
+
+retrieveSnapshot :: Aeson.FromJSON state => Functions.WithConnection -> SnapshotStreamName -> IO (Maybe (Either UnprocessedMessage (Snapshot state)))
+retrieveSnapshot withConnection streamName =
+  runMaybeT . runExceptT $ do
+    message <-
+      lift . MaybeT . withConnection $ \connection ->
+        Functions.getLastStreamMessage connection (coerce streamName)
+
+    Message.ParsedMessage{parsedPayload, parsedMetadata} <-
+      let handleError failure =
+            UnprocessedMessage
+              { message = message
+              , reason = Handlers.HandlerParseFailure failure
+              }
+       in liftEither . first handleError $ Message.parseMessage message
+
+    pure $
+      Snapshot
+        { snapshotState = parsedPayload
+        , snapshotPosition = parsedMetadata
+        , snapshotVersion = Message.messageStreamPosition message
+        }
+
+
+recordSnapshot :: forall state. Aeson.ToJSON state => Functions.WithConnection -> SnapshotStreamName -> state -> Message.StreamPosition -> Functions.ExpectedVersion -> IO ()
+recordSnapshot withConnection streamName snapshotState snapshotPosition expectedVersion = do
+  liftIO . withConnection $ \connection ->
+    -- An 'Functions.ExpectedVersionViolation' means that someone else wrote a snapshot
+    -- in between us reading the latest snapshot and computing the next snapshot.
+    -- In this case, we disregard this snapshot because it's out of date.
+    handle (\(_ :: Functions.ExpectedVersionViolation) -> pure ()) . void $
+      Functions.writeMessage
+        connection
+        (coerce streamName)
+        "Snapshotted"
+        snapshotState
+        (Just snapshotPosition)
+        (Just expectedVersion)
+
+
+fetchWithSnapshots ::
+  forall state.
+  (Aeson.ToJSON state, Aeson.FromJSON state) =>
+  Functions.WithConnection ->
+  Functions.BatchSize ->
+  StreamName ->
+  SnapshotStreamName ->
+  Projection state ->
+  IO (Maybe (Projected state))
+fetchWithSnapshots withConnection batchSize streamName snapshotStreamName projection  = do
+  previousSnapshotResult <- retrieveSnapshot @state withConnection snapshotStreamName
+
+  fetchResult <-
+    uncurry (fetch @state withConnection batchSize streamName) $
+      case previousSnapshotResult of
+        Just (Right Snapshot{..}) ->
+          (snapshotPosition + 1, projection{initial = snapshotState})
+        _ ->
+          (0, projection)
+
+  case fetchResult of
+    Just Projected{version, state}
+      | Functions.DoesExist updatedSnapshotVersion <- version ->
+          let expectedVersion =
+                Functions.ExpectedVersion $ case previousSnapshotResult of
+                  Just (Left UnprocessedMessage{message}) ->
+                    Functions.DoesExist $ Message.messageStreamPosition message
+                  Just (Right Snapshot{snapshotVersion}) ->
+                    Functions.DoesExist snapshotVersion
+                  Nothing ->
+                    Functions.DoesNotExist
+           in recordSnapshot withConnection snapshotStreamName state updatedSnapshotVersion expectedVersion
+    _ -> pure ()
+
+  pure $ case previousSnapshotResult of
+    (Just (Left err)) ->
+      fmap (\p -> p{unprocessed = err : (unprocessed p)}) fetchResult
+    _ ->
+      fetchResult

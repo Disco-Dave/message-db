@@ -509,6 +509,7 @@ fetch accountId = do
       (Pool.withResource connectionPool)
       (Functions.FixedSize 100)
       (entityStream accountId)
+      0
       projection
 
 

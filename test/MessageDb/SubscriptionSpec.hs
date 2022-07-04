@@ -27,6 +27,7 @@ fetch handlers accountId = do
       (Pool.withResource connectionPool)
       (Functions.FixedSize 100)
       (BankAccount.entityStream accountId)
+      0
       ( BankAccount.projection
           { Projection.handlers = handlers
           }

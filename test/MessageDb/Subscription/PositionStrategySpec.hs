@@ -114,6 +114,7 @@ spec =
             (Pool.withResource connectionPool)
             Functions.Unlimited
             (BankAccount.entityStream accountId)
+            0
             BankAccount.projection
 
         restoredVar <- MVar.newEmptyMVar
