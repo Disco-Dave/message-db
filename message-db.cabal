@@ -15,12 +15,12 @@ author: David Burkett
 maintainer: David Burkett
 
 copyright: 2022 David Burkett
-license: BSD-3-Clause
+license: MIT
 license-file: LICENSE
 
-extra-source-files:
-  README.md
-  ChangeLog.md
+source-repository head
+  type: git
+  location: https://github.com/Disco-Dave/message-db.git
 
 common shared
   default-language: Haskell2010
