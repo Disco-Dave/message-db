@@ -1,4 +1,4 @@
--- | Subscribe to a category and react to the messages.
+-- | Subscribe to a category and react to messages.
 module MessageDb.Subscription
   ( Subscription (..)
   , subscribe
@@ -32,24 +32,34 @@ import MessageDb.Units (Microseconds (..), NumberOfMessages (..))
 -- | Defines how to subscribe to a category.
 data Subscription = Subscription
   { categoryName :: Category
-  , messagesPerTick :: NumberOfMessages
+  -- ^ Name of the 'Category' to subscribe to.
+  , batchSize :: NumberOfMessages
+  -- ^ Max amount of messages to query for at once. Defaults to 100.
   , tickInterval :: Microseconds
+  -- ^ Amount of time in 'Microseconds' to sleep in between polls. Defaults to 100_000.
   , logMessages :: NonEmpty Message -> IO ()
+  -- ^ Log messages when found. Defaults to '\_ -> pure ()'.
   , failureStrategy :: FailureStrategy
+  -- ^ Strategy for dealing with failures. Defaults to 'FailureStrategy.ignoreFailures'.
   , positionStrategy :: PositionStrategy
+  -- ^ Strategy for (re)storing subscription position. Defaults to 'PositionStrategy.dontSave'.
   , handlers :: Handlers.SubscriptionHandlers
+  -- ^ Set of functions for handling different message types.  Defaults to 'Handlers.emptyHandlers'.
   , consumerGroup :: Maybe Functions.ConsumerGroup
+  -- ^ Set the consumer group information for parallel consumption. Defaults to 'Nothing'.
   , condition :: Maybe Functions.Condition
+  -- ^ SQL condition to filter the batch by. Defaults to 'Nothing'.
   , correlation :: Maybe Functions.Correlation
+  -- ^ Category or stream name recorded in message metadata's 'correlationStreamName' attribute to filter the batch by. Defaults to 'Nothing'.
   }
 
 
--- | Construct a new subscription.
+-- | Construct a new subscription. For default values see the docs for 'Subscription'.
 subscribe :: Category -> Subscription
 subscribe categoryName =
   Subscription
     { categoryName = categoryName
-    , messagesPerTick = 100
+    , batchSize = 100
     , tickInterval = 100_000
     , logMessages = \_ -> pure ()
     , failureStrategy = FailureStrategy.ignoreFailures
@@ -62,6 +72,7 @@ subscribe categoryName =
 
 
 -- | Start the subscription. Notice this will never return.
+-- You may want to use something like [Immortal](https://hackage.haskell.org/package/immortal) to ensure this never dies.
 start :: Functions.WithConnection -> Subscription -> IO Void
 start withConnection Subscription{..} = do
   let sleep :: IO ()
@@ -75,7 +86,7 @@ start withConnection Subscription{..} = do
             connection
             categoryName
             (Just position)
-            (Just $ Functions.FixedSize messagesPerTick)
+            (Just $ Functions.FixedSize batchSize)
             correlation
             consumerGroup
             condition
@@ -120,7 +131,7 @@ start withConnection Subscription{..} = do
             lastPositionSaved
             currentPosition
 
-        when (numberOfMessages < messagesPerTick) sleep
+        when (numberOfMessages < batchSize) sleep
 
         poll nextPosition (fromMaybe lastPositionSaved positionSaved)
 

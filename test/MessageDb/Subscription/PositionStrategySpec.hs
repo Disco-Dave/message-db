@@ -27,7 +27,7 @@ subscribe positionStrategy = do
   pure $
     subscription
       { Subscription.positionStrategy = positionStrategy testAppData
-      , Subscription.messagesPerTick = 5
+      , Subscription.batchSize = 5
       }
 
 

@@ -86,10 +86,9 @@ instance Aeson.ToJSON Money
 instance Aeson.FromJSON Money
 
 
-{- | The metadata of the message that is written to the entity stream.
- For example when handling a command from bankAccount:command with a global position of 123,
- then we write the resulting message to the entity stream with @createdFrom@ set to 123.
--}
+-- | The metadata of the message that is written to the entity stream.
+-- For example when handling a command from bankAccount:command with a global position of 123,
+-- then we write the resulting message to the entity stream with @createdFrom@ set to 123.
 newtype AccountMetadata = AccountMetadata
   { createdFrom :: Message.GlobalPosition
   }
@@ -588,9 +587,8 @@ handleCommand runInIO processCommand =
             (Just expectedVersion)
 
 
-{- | Subscribe to the 'BankAccount's command stream. You'd use 'Subscription.start' to start this subscription.
- 'subscribe' alongside 'handleCommand' demostrate how it's possible to construct a subscription that uses a monad other than IO.
--}
+-- | Subscribe to the 'BankAccount's command stream. You'd use 'Subscription.start' to start this subscription.
+-- 'subscribe' alongside 'handleCommand' demostrate how it's possible to construct a subscription that uses a monad other than IO.
 subscribe :: TestApp Subscription
 subscribe =
   withRunInIO $ \runInIO -> do

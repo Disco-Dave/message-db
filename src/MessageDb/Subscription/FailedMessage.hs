@@ -64,9 +64,8 @@ instance Aeson.FromJSON FailedMessage where
     pure $ FailedMessage{..}
 
 
-{- | If you have a stream of 'FailedMessage' messages, then you can use
- this function so you can handle the original messages that failed.
--}
+-- | If you have a stream of 'FailedMessage' messages, then you can use
+-- this function so you can handle the original messages that failed.
 handleFailures :: Handlers output -> Handlers output
 handleFailures originalHandlers =
   let failedMessageHandle = do
