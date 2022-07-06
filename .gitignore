@@ -1,4 +1,4 @@
-cabal.project.local
-dist-newstyle
-.stack-work/
+**/cabal.project.local
+**/dist-newstyle
+**/.stack-work/
 *~

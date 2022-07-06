@@ -94,7 +94,7 @@ withDatabaseUrl use = do
           }
 
   let retryPolicy =
-        Retry.limitRetriesByCumulativeDelay 5_000_000 $
+        Retry.limitRetriesByCumulativeDelay 32_000 $
           Retry.exponentialBackoff 1_000
 
       exceptionHandlers =
