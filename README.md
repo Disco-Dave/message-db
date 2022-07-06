@@ -1,7 +1,7 @@
 # message-db
 Client library for interacting with message db installed in PostgreSQL.
 
-For an example see [BankAccount.hs](./test/Examples/BankAccount.hs)
+For an example see [BankAccount.hs](./message-db/test/Examples/BankAccount.hs)
 
 ## Further Reading
 - [Docs - Official Message DB user guide](http://docs.eventide-project.org/user-guide/message-db)
