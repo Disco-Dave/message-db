@@ -1,12 +1,13 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module TempMessageDb
+module MessageDb.Temp
   ( withDatabaseUrl
   , withConnection
   )
 where
 
 import Control.Exception (Exception, IOException)
+import Control.Exception.Safe (bracket, throwIO)
 import Control.Monad (void)
 import Control.Monad.Catch (Handler (Handler))
 import qualified Control.Retry as Retry
@@ -21,15 +22,17 @@ import qualified Database.PostgreSQL.Simple.Options as PostgresOptions
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import Database.Postgres.Temp (Accum (Merge))
 import qualified Database.Postgres.Temp as PostgresTemp
+import qualified Paths_message_db_temp
 import System.Environment (getEnvironment)
 import qualified System.Process.Typed as Process
-import qualified UnliftIO
-import UnliftIO.Exception (bracket)
 
 
 migrate :: Options -> IO ()
 migrate options = do
   hostEnv <- getEnvironment
+
+  installScriptPath <-
+    Paths_message_db_temp.getDataFileName "official-message-db-upstream/database/install.sh"
 
   let fromLast =
         fromMaybe "" . getLast
@@ -53,7 +56,7 @@ migrate options = do
                , fromLast $ PostgresOptions.user options
                )
              ]
-      command = Process.proc "test/message-db-init-scripts/database/install.sh" []
+      command = Process.proc installScriptPath []
    in void . Process.readProcess_ $ Process.setEnv processEnv command
 
   let url = PostgresOptions.toConnectionString options
@@ -117,7 +120,7 @@ withDatabaseUrl use = do
        in migrate options *> use dbUrl
 
     case result of
-      Left err -> UnliftIO.throwIO err
+      Left err -> throwIO err
       Right value -> pure value
 
 

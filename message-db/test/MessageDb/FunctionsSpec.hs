@@ -16,7 +16,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
 import qualified MessageDb.StreamName as StreamName
-import TempMessageDb (withConnection)
+import MessageDb.Temp (withConnection)
 import Test.Hspec
 import UnliftIO.Exception (try)
 

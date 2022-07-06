@@ -21,8 +21,8 @@ import qualified MessageDb.Functions as Functions
 import MessageDb.StreamName (Category, StreamName)
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
+import qualified MessageDb.Temp as TempMessageDb
 import MessageDb.Units (NumberOfMessages (NumberOfMessages))
-import qualified TempMessageDb
 import UnliftIO (MonadUnliftIO (withRunInIO))
 import qualified UnliftIO.Async as Async
 import UnliftIO.Concurrent (threadDelay)
