@@ -1,4 +1,6 @@
 **/cabal.project.local
 **/dist-newstyle
+**/stack.yaml
+**/stack.yaml.lock
 **/.stack-work/
 *~
