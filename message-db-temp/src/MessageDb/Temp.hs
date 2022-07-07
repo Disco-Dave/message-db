@@ -1,8 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module MessageDb.Temp
-  ( withDatabaseUrl,
-    withConnection,
+  ( withDatabaseUrl
+  , withConnection
   )
 where
 
@@ -56,7 +56,7 @@ migrate options = do
                , fromLast $ PostgresOptions.user options
                )
              ]
-      command = Process.proc "bash" [ installScriptPath ]
+      command = Process.proc "bash" [installScriptPath]
    in void . Process.readProcess_ $ Process.setEnv processEnv command
 
   let url = PostgresOptions.toConnectionString options
@@ -97,7 +97,7 @@ withDatabaseUrl use = do
           }
 
   let retryPolicy =
-        Retry.limitRetries 10 
+        Retry.limitRetries 10
 
       exceptionHandlers =
         let restartFor :: forall e a. Exception e => a -> Handler IO Bool
