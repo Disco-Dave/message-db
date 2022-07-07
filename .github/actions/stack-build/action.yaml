@@ -9,6 +9,10 @@ inputs:
     description: "Resolver to use from stackage"
     required: false
     default: "lts-19.7"
+  package:
+    description: "Name of the package to build and test"
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -35,14 +39,14 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        stack build --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
+        stack build ${{ inputs.package }} --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
 
     - name: Build
       shell: bash
       run: |
-        stack build --test --bench --no-run-tests --no-run-benchmarks
+        stack build ${{ inputs.package }} --test --bench --no-run-tests --no-run-benchmarks
 
     - name: Test
       shell: bash
       run: |
-        stack test
+        stack test ${{ inputs.package }}

@@ -1,0 +1,93 @@
+name: "message-db-temp-cicd"
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "message-db-temp/**"
+
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "message-db-temp/**"
+
+jobs:
+  hlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: "Set up HLint"
+        uses: haskell/actions/hlint-setup@v2
+        with:
+          version: "3.4"
+
+      - name: "Run HLint"
+        uses: haskell/actions/hlint-run@v2
+        with:
+          path: '["message-db-temp/src/", "message-db-temp/test/"]'
+          fail-on: warning
+
+  fourmolu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: fourmolu/fourmolu-action@v2
+        with:
+          pattern: |
+            message-db-temp/src/**/*.hs
+            message-db-temp/test/**/*.hs
+
+  cabal:
+    name: cabal ${{ matrix.cabal }} / ghc ${{ matrix.ghc }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        cabal: ["3.6"]
+        ghc:
+          - "8.10"
+          - "9.0"
+          - "9.2"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: "Setup system dependencies"
+        uses: "./.github/actions/setup-system-dependencies"
+
+      - uses: "./.github/actions/cabal-build"
+        name: Build
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+          package: message-db-temp
+
+  stack:
+    name: stack ${{ matrix.stack }} / ${{ matrix.resolver }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"]
+        stack: ["2.7.5"]
+        resolver:
+          - "lts-18"
+          - "lts-19"
+          - "nightly"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: "Setup system dependencies"
+        uses: "./.github/actions/setup-system-dependencies"
+
+      - uses: "./.github/actions/stack-build"
+        name: Build
+        with:
+          resolver: ${{ matrix.resolver }}
+          stack-version: ${{ matrix.stack }}
+          package: message-db-temp

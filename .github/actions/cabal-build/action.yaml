@@ -9,6 +9,10 @@ inputs:
     description: "Version of ghc to use"
     required: false
     default: "8.10.7"
+  package:
+    description: "Name of the package to build and test"
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -34,14 +38,14 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        cabal build all --only-dependencies
+        cabal build ${{ inputs.package }} --only-dependencies
 
     - name: Build
       shell: bash
       run: |
-        cabal build all
+        cabal build ${{ inputs.package }}
 
     - name: Test
       shell: bash
       run: |
-        cabal test all
+        cabal test ${{ inputs.package }}
