@@ -2,7 +2,6 @@
 
 module MessageDb.Temp
   ( withDatabaseUrl
-  , withConnection
   )
 where
 
@@ -16,7 +15,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid (getLast)
 import qualified Database.PostgreSQL.Simple as Postgres
-import qualified Database.PostgreSQL.Simple as Simple
 import Database.PostgreSQL.Simple.Options (Options)
 import qualified Database.PostgreSQL.Simple.Options as PostgresOptions
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -60,21 +58,21 @@ migrate options = do
    in void . Process.readProcess_ $ Process.setEnv processEnv command
 
   let url = PostgresOptions.toConnectionString options
-   in bracket (Simple.connectPostgreSQL url) Simple.close $ \connection -> do
+   in bracket (Postgres.connectPostgreSQL url) Postgres.close $ \connection -> do
         let query =
               [sql|
                 CREATE ROLE test_user 
                 WITH LOGIN PASSWORD 'password' 
                 IN ROLE message_store;
               |]
-         in void $ Simple.execute_ connection query
+         in void $ Postgres.execute_ connection query
 
         let query =
               [sql|
                 ALTER ROLE test_user 
                 SET search_path TO message_store,public;
               |]
-         in void $ Simple.execute_ connection query
+         in void $ Postgres.execute_ connection query
 
 
 withDatabaseUrl :: (ByteString -> IO a) -> IO a
@@ -121,9 +119,3 @@ withDatabaseUrl use = do
     case result of
       Left err -> throwIO err
       Right value -> pure value
-
-
-withConnection :: (Postgres.Connection -> IO a) -> IO a
-withConnection use =
-  withDatabaseUrl $ \url ->
-    bracket (Simple.connectPostgreSQL url) Simple.close use

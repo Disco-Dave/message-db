@@ -9,6 +9,7 @@ import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Time as Time
+import qualified Database.PostgreSQL.Simple as Postgres
 import qualified Database.PostgreSQL.Simple as Simple
 import Generators.Message (genGlobalPosition, genMessageType, genMetadata, genPayload)
 import Generators.StreamName (genCategory, genIdentifier, genStreamName)
@@ -16,14 +17,20 @@ import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
 import qualified MessageDb.StreamName as StreamName
-import MessageDb.Temp (withConnection)
+import MessageDb.Temp (withDatabaseUrl)
 import Test.Hspec
-import UnliftIO.Exception (try)
+import UnliftIO.Exception (bracket, try)
 
 
 isCorrectTimestamp :: Time.UTCTime -> Time.NominalDiffTime -> Message.CreatedAt -> Bool
 isCorrectTimestamp now tolerance (Message.CreatedAt timestamp) =
   abs (Time.diffUTCTime now timestamp) <= tolerance
+
+
+withConnection :: (Postgres.Connection -> IO a) -> IO a
+withConnection use =
+  withDatabaseUrl $ \url ->
+    bracket (Simple.connectPostgreSQL url) Simple.close use
 
 
 spec :: Spec
