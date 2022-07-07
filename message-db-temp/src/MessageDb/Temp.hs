@@ -56,7 +56,7 @@ migrate options = do
                , fromLast $ PostgresOptions.user options
                )
              ]
-      command = Process.proc installScriptPath []
+      command = Process.proc "bash" [ installScriptPath ]
    in void . Process.readProcess_ $ Process.setEnv processEnv command
 
   let url = PostgresOptions.toConnectionString options
@@ -97,8 +97,7 @@ withDatabaseUrl use = do
           }
 
   let retryPolicy =
-        Retry.limitRetriesByCumulativeDelay 3_000_000 $
-          Retry.constantDelay 100_000
+        Retry.limitRetries 10 
 
       exceptionHandlers =
         let restartFor :: forall e a. Exception e => a -> Handler IO Bool

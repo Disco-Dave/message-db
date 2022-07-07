@@ -12,34 +12,6 @@ on:
       - "message-db-temp/**"
 
 jobs:
-  hlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-
-      - name: "Set up HLint"
-        uses: haskell/actions/hlint-setup@v2
-        with:
-          version: "3.4"
-
-      - name: "Run HLint"
-        uses: haskell/actions/hlint-run@v2
-        with:
-          path: '["message-db-temp/src/", "message-db-temp/test/"]'
-          fail-on: warning
-
-  fourmolu:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: fourmolu/fourmolu-action@v2
-        with:
-          pattern: |
-            message-db-temp/src/**/*.hs
-            message-db-temp/test/**/*.hs
-
   cabal:
     name: cabal ${{ matrix.cabal }} / ghc ${{ matrix.ghc }}
     runs-on: ${{ matrix.os }}
