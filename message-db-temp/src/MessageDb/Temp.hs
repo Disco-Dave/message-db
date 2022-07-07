@@ -1,8 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module MessageDb.Temp
-  ( withDatabaseUrl
-  , withConnection
+  ( withDatabaseUrl,
+    withConnection,
   )
 where
 
@@ -97,8 +97,8 @@ withDatabaseUrl use = do
           }
 
   let retryPolicy =
-        Retry.limitRetriesByCumulativeDelay 32_000 $
-          Retry.exponentialBackoff 1_000
+        Retry.limitRetriesByCumulativeDelay 3_000_000 $
+          Retry.constantDelay 100_000
 
       exceptionHandlers =
         let restartFor :: forall e a. Exception e => a -> Handler IO Bool
