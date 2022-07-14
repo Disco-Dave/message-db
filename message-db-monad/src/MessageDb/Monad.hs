@@ -1,17 +1,17 @@
 module MessageDb.Monad
   ( MessageDbData (..),
-    HasMessageDbData (..),
+    MessageDb (..),
     MessageDbT (..),
     runMessageDbT,
-    MessageDb,
-    runMessageDb,
+    MessageDbIO,
+    runMessageDbIO,
     withConnection,
   )
 where
 
 import Control.Monad.Catch (MonadCatch, MonadThrow)
 import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (MonadReader, ReaderT (runReaderT), asks)
+import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT))
 import Control.Monad.Trans (MonadTrans)
 import Data.Pool (Pool, withResource)
 import Database.PostgreSQL.Simple (Connection)
@@ -24,14 +24,6 @@ data MessageDbData = MessageDbData
   , batchSize :: NumberOfMessages
   , pollInterval :: Microseconds
   }
-
-
-class HasMessageDbData r where
-  getMessageDbData :: r -> MessageDbData
-
-
-instance HasMessageDbData MessageDbData where
-  getMessageDbData = id
 
 
 newtype MessageDbT m a = MessageDbT (ReaderT MessageDbData m a)
@@ -54,15 +46,24 @@ runMessageDbT messageDbData (MessageDbT messageDbT) =
   runReaderT messageDbT messageDbData
 
 
-type MessageDb = MessageDbT IO
+class MessageDb m where
+  getMessageDbData :: m MessageDbData
 
 
-runMessageDb :: MessageDbData -> MessageDb a -> IO a
-runMessageDb =
+instance Monad m => MessageDb (MessageDbT m) where
+  getMessageDbData =
+    MessageDbT ask
+
+
+type MessageDbIO = MessageDbT IO
+
+
+runMessageDbIO :: MessageDbData -> MessageDbIO a -> IO a
+runMessageDbIO =
   runMessageDbT
 
 
-withConnection :: (MonadReader r m, HasMessageDbData r, MonadIO m) => (Connection -> IO a) -> m a
+withConnection :: (MessageDb m, MonadIO m) => (Connection -> IO a) -> m a
 withConnection useConnection = do
-  connections <- asks (connectionPool . getMessageDbData)
-  liftIO $ withResource connections useConnection
+  MessageDbData{connectionPool} <- getMessageDbData
+  liftIO $ withResource connectionPool useConnection

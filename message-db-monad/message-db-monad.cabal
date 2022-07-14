@@ -89,6 +89,7 @@ library
     MessageDb.Monad
 
   build-depends:
+    , aeson
     , bytestring >=0.10 && <0.12
     , containers >=0.6 && <0.7
     , exceptions >=0.10 && <0.11
