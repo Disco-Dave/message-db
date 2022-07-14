@@ -63,9 +63,9 @@ getStreamMessages ::
   Maybe Functions.Condition ->
   m [Message]
 getStreamMessages streamName position condition = do
-  batchSize <- fmap getBatchSize getMessageDbData
+  batchSize <- fmap (Just . getBatchSize) getMessageDbData
   MessageDb.withConnection $ \connection ->
-    Functions.getStreamMessages connection streamName position (Just batchSize) condition
+    Functions.getStreamMessages connection streamName position batchSize condition
 
 
 getCategoryMessages ::
@@ -79,9 +79,9 @@ getCategoryMessages ::
   Maybe Functions.Condition ->
   m [Message]
 getCategoryMessages category position correlation consumerGroup condition = do
-  batchSize <- fmap getBatchSize getMessageDbData
+  batchSize <- fmap (Just . getBatchSize) getMessageDbData
   MessageDb.withConnection $ \connection ->
-    Functions.getCategoryMessages connection category position (Just batchSize) correlation consumerGroup condition
+    Functions.getCategoryMessages connection category position batchSize correlation consumerGroup condition
 
 
 getLastStreamMessage :: (MonadIO m, MessageDb m) => StreamName -> m (Maybe Message)
