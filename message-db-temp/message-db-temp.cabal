@@ -3,7 +3,7 @@ cabal-version: 3.0
 name: message-db-temp
 version: 0.1.0.0
 
-synopsis: Client library for Message-DB installed in PostgreSQL.
+synopsis: Built on top of tmp-postgres to provide a temporary message db for integration testing
 description: See the readme on github for me info: https://github.com/Disco-Dave/message-db-temp#readme
 
 build-type: Simple
