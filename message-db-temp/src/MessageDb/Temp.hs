@@ -1,7 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module MessageDb.Temp
-  ( withDatabaseUrl
+  ( ConnectionStrings (..),
+    withConnectionStrings,
   )
 where
 
@@ -23,6 +24,15 @@ import qualified Database.Postgres.Temp as PostgresTemp
 import qualified Paths_message_db_temp
 import System.Environment (getEnvironment)
 import qualified System.Process.Typed as Process
+
+
+-- | Connection strings used to connect to your temporary message-db.
+data ConnectionStrings = ConnectionStrings
+  { privilegedConnectionString :: ByteString
+  -- ^ Connection string used to connect to the database as a privileged user.
+  , normalConnectionString :: ByteString
+  -- ^ Connection string used to connect to the database as a user that only has the 'message_store' role.
+  }
 
 
 migrate :: Options -> IO ()
@@ -61,7 +71,7 @@ migrate options = do
    in bracket (Postgres.connectPostgreSQL url) Postgres.close $ \connection -> do
         let query =
               [sql|
-                CREATE ROLE test_user 
+                CREATE ROLE normal_user 
                 WITH LOGIN PASSWORD 'password' 
                 IN ROLE message_store;
               |]
@@ -69,25 +79,33 @@ migrate options = do
 
         let query =
               [sql|
-                ALTER ROLE test_user 
+                ALTER ROLE normal_user 
+                SET search_path TO message_store,public;
+              |]
+         in void $ Postgres.execute_ connection query
+
+        let query =
+              [sql|
+                ALTER ROLE privileged_user
                 SET search_path TO message_store,public;
               |]
          in void $ Postgres.execute_ connection query
 
 
-withDatabaseUrl :: (ByteString -> IO a) -> IO a
-withDatabaseUrl use = do
+-- | Create and use a temporary message-db for testing.
+withConnectionStrings :: (ConnectionStrings -> IO a) -> IO a
+withConnectionStrings use = do
   let tempConfig =
         mempty
           { PostgresTemp.connectionOptions =
               mempty
-                { PostgresOptions.user = pure "postgres"
+                { PostgresOptions.user = pure "privileged_user"
                 }
           , PostgresTemp.initDbConfig =
               Merge $
                 mempty
                   { PostgresTemp.commandLine =
-                      mempty{PostgresTemp.keyBased = Map.fromList [("--username=", Just "postgres")]}
+                      mempty{PostgresTemp.keyBased = Map.fromList [("--username=", Just "privileged_user")]}
                   }
           , PostgresTemp.postgresConfigFile =
               [ ("message_store.sql_condition", "on")
@@ -105,16 +123,26 @@ withDatabaseUrl use = do
             ]
 
   Retry.recovering retryPolicy exceptionHandlers $ \_ -> do
-    result <- PostgresTemp.withConfig tempConfig $ \db ->
-      let options = PostgresTemp.toConnectionOptions db
-          dbUrl =
-            PostgresOptions.toConnectionString $
-              options
-                { PostgresOptions.user = pure "test_user"
-                , PostgresOptions.password = pure "password"
-                , PostgresOptions.dbname = pure "message_store"
-                }
-       in migrate options *> use dbUrl
+    result <- PostgresTemp.withConfig tempConfig $ \db -> do
+      let options =
+            PostgresTemp.toConnectionOptions db
+
+          tempMessageDb =
+            let privilegedConnectionString =
+                  PostgresOptions.toConnectionString $
+                    options
+                      { PostgresOptions.dbname = pure "message_store"
+                      }
+
+                normalConnectionString =
+                  PostgresOptions.toConnectionString $
+                    options
+                      { PostgresOptions.user = pure "normal_user"
+                      , PostgresOptions.password = pure "password"
+                      , PostgresOptions.dbname = pure "message_store"
+                      }
+             in ConnectionStrings{..}
+      migrate options *> use tempMessageDb
 
     case result of
       Left err -> throwIO err

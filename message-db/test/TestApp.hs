@@ -1,13 +1,13 @@
 module TestApp
-  ( TestAppData (..)
-  , withTestAppData
-  , TestApp (..)
-  , runWith
-  , run
-  , withConnection
-  , withSubscriptions
-  , blockUntilStreamHas
-  , blockUntilCategoryHas
+  ( TestAppData (..),
+    withTestAppData,
+    TestApp (..),
+    runWith,
+    run,
+    withConnection,
+    withSubscriptions,
+    blockUntilStreamHas,
+    blockUntilCategoryHas,
   )
 where
 
@@ -21,6 +21,7 @@ import qualified MessageDb.Functions as Functions
 import MessageDb.StreamName (Category, StreamName)
 import MessageDb.Subscription (Subscription)
 import qualified MessageDb.Subscription as Subscription
+import MessageDb.Temp (ConnectionStrings (..))
 import qualified MessageDb.Temp as TempMessageDb
 import MessageDb.Units (NumberOfMessages (NumberOfMessages))
 import UnliftIO (MonadUnliftIO (withRunInIO))
@@ -37,12 +38,12 @@ newtype TestAppData = TestAppData
 withTestAppData :: (TestAppData -> IO value) -> IO value
 withTestAppData =
   runContT $ do
-    databaseUrl <-
-      ContT TempMessageDb.withDatabaseUrl
+    ConnectionStrings{normalConnectionString} <-
+      ContT TempMessageDb.withConnectionStrings
 
     connectionPool <-
       let createPool =
-            let createConnection = Postgres.connectPostgreSQL databaseUrl
+            let createConnection = Postgres.connectPostgreSQL normalConnectionString
                 destroyConnection = Postgres.close
              in Pool.createPool createConnection destroyConnection 1 15 2
 

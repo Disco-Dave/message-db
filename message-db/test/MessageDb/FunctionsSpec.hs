@@ -1,5 +1,5 @@
 module MessageDb.FunctionsSpec
-  ( spec
+  ( spec,
   )
 where
 
@@ -17,7 +17,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified MessageDb.Functions as Functions
 import qualified MessageDb.Message as Message
 import qualified MessageDb.StreamName as StreamName
-import MessageDb.Temp (withDatabaseUrl)
+import MessageDb.Temp (ConnectionStrings (..), withConnectionStrings)
 import Test.Hspec
 import UnliftIO.Exception (bracket, try)
 
@@ -29,8 +29,8 @@ isCorrectTimestamp now tolerance (Message.CreatedAt timestamp) =
 
 withConnection :: (Postgres.Connection -> IO a) -> IO a
 withConnection use =
-  withDatabaseUrl $ \url ->
-    bracket (Simple.connectPostgreSQL url) Simple.close use
+  withConnectionStrings $ \ConnectionStrings{normalConnectionString} ->
+    bracket (Simple.connectPostgreSQL normalConnectionString) Simple.close use
 
 
 spec :: Spec
