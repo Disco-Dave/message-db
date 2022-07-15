@@ -103,7 +103,7 @@ jobs:
 
       - name: "Bundle the documentation"
         run: |
-          cabal haddock --haddock-for-hackage --enable-doc messge-db-temp
+          cabal haddock --haddock-for-hackage --enable-doc message-db-temp
 
       - name: "Publish package to Hackage"
         if: github.event_name == 'release'
