@@ -84,6 +84,7 @@ jobs:
         with:
           ghc-version: "8.10.7"
           cabal-version: "3.6"
+          package: "message-db-temp"
 
       - name: Freeze
         run: |
@@ -98,11 +99,11 @@ jobs:
 
       - name: "Bundle the package"
         run: |
-          cabal sdist
+          cabal sdist message-db-temp
 
       - name: "Bundle the documentation"
         run: |
-          cabal haddock --haddock-for-hackage --enable-doc
+          cabal haddock --haddock-for-hackage --enable-doc messge-db-temp
 
       - name: "Publish package to Hackage"
         if: github.event_name == 'release'
