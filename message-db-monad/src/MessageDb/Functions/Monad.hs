@@ -1,11 +1,11 @@
 module MessageDb.Functions.Monad
-  ( lookupById,
-    lookupByPosition,
-    writeMessage,
-    getStreamMessages,
-    getCategoryMessages,
-    getLastStreamMessage,
-    streamVersion,
+  ( lookupById
+  , lookupByPosition
+  , writeMessage
+  , getStreamMessages
+  , getCategoryMessages
+  , getLastStreamMessage
+  , streamVersion
   )
 where
 
@@ -14,7 +14,7 @@ import qualified Data.Aeson as Aeson
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message (Message)
 import qualified MessageDb.Message as Message
-import MessageDb.Monad (MessageDb (getMessageDbData), MessageDbData)
+import MessageDb.Monad (MessageDbData, MonadMessageDb (getMessageDbData))
 import qualified MessageDb.Monad as MessageDb
 import MessageDb.StreamName (StreamName)
 import qualified MessageDb.StreamName as StreamName
@@ -25,13 +25,13 @@ getBatchSize =
   Functions.FixedSize . MessageDb.batchSize
 
 
-lookupById :: (MonadIO m, MessageDb m) => Message.MessageId -> m (Maybe Message)
+lookupById :: (MonadIO m, MonadMessageDb m) => Message.MessageId -> m (Maybe Message)
 lookupById messageId =
   MessageDb.withConnection $ \connection ->
     Functions.lookupById connection messageId
 
 
-lookupByPosition :: (MonadIO m, MessageDb m) => Message.GlobalPosition -> m (Maybe Message)
+lookupByPosition :: (MonadIO m, MonadMessageDb m) => Message.GlobalPosition -> m (Maybe Message)
 lookupByPosition position =
   MessageDb.withConnection $ \connection ->
     Functions.lookupByPosition connection position
@@ -41,7 +41,7 @@ writeMessage ::
   ( Aeson.ToJSON payload
   , Aeson.ToJSON metadata
   , MonadIO m
-  , MessageDb m
+  , MonadMessageDb m
   ) =>
   StreamName ->
   Message.MessageType ->
@@ -56,7 +56,7 @@ writeMessage streamName messageType payload metadata expectedVersion = do
 
 getStreamMessages ::
   ( MonadIO m
-  , MessageDb m
+  , MonadMessageDb m
   ) =>
   StreamName ->
   Maybe Message.StreamPosition ->
@@ -70,7 +70,7 @@ getStreamMessages streamName position condition = do
 
 getCategoryMessages ::
   ( MonadIO m
-  , MessageDb m
+  , MonadMessageDb m
   ) =>
   StreamName.Category ->
   Maybe Message.GlobalPosition ->
@@ -84,13 +84,13 @@ getCategoryMessages category position correlation consumerGroup condition = do
     Functions.getCategoryMessages connection category position batchSize correlation consumerGroup condition
 
 
-getLastStreamMessage :: (MonadIO m, MessageDb m) => StreamName -> m (Maybe Message)
+getLastStreamMessage :: (MonadIO m, MonadMessageDb m) => StreamName -> m (Maybe Message)
 getLastStreamMessage streamName =
   MessageDb.withConnection $ \connection ->
     Functions.getLastStreamMessage connection streamName
 
 
-streamVersion :: (MonadIO m, MessageDb m) => StreamName -> m (Maybe Message.StreamPosition)
+streamVersion :: (MonadIO m, MonadMessageDb m) => StreamName -> m (Maybe Message.StreamPosition)
 streamVersion streamName =
   MessageDb.withConnection $ \connection ->
     Functions.streamVersion connection streamName

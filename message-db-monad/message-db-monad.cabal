@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name: message-db-monad
-version: 0.1.0.0
+version: 0.0.1.0
 
 synopsis: Custom monads for message-db
 description: See the readme on github for me info: https://github.com/Disco-Dave/message-db-monad#readme
@@ -44,6 +44,7 @@ common shared
     RecordWildCards
     ScopedTypeVariables
     StrictData
+    TupleSections
     TypeApplications
 
   ghc-options:
@@ -86,6 +87,7 @@ library
 
   exposed-modules:
     MessageDb.Functions.Monad
+    MessageDb.Subscription.Monad
     MessageDb.Monad
 
   build-depends:
