@@ -38,3 +38,5 @@ jobs:
         with:
           package: message-db-temp
           candidate: "false"
+          hackage_user: ${{ secrets.HACKAGE_USER }}
+          hackage_password: ${{ secrets.HACKAGE_PASSWORD }}

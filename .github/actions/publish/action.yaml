@@ -16,6 +16,12 @@ inputs:
     description: "Publish as a candidate release"
     required: false
     default: "true"
+  hackage_user:
+    description: "username for hackage"
+    required: true
+  hackage_password:
+    description: "password for hackage"
+    required: true
 
 runs:
   using: "composite"
@@ -35,7 +41,6 @@ runs:
 
     - uses: actions/cache@v2.1.3
       name: Cache ~/.cabal/store
-      shell: bash
       with:
         path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
         key: publish-${{ hashFiles('deps') }}
@@ -54,8 +59,8 @@ runs:
       shell: bash
       if: inputs.candidate != 'true'
       env:
-        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
-        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        HACKAGE_USER: ${{ inputs.hackage_user }}
+        HACKAGE_PASSWORD: ${{ inputs.hackage_password }}
       run: |
         cabal upload --publish -u $HACKAGE_USER -p $HACKAGE_PASSWORD ./dist-newstyle/sdist/*.tar.gz
 
@@ -63,8 +68,8 @@ runs:
       shell: bash
       if: inputs.candidate == 'true'
       env:
-        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
-        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        HACKAGE_USER: ${{ inputs.hackage_user }}
+        HACKAGE_PASSWORD: ${{ inputs.hackage_password }}
       run: |
         cabal upload -u $HACKAGE_USER -p $HACKAGE_PASSWORD ./dist-newstyle/sdist/*.tar.gz
 
@@ -72,8 +77,8 @@ runs:
       shell: bash
       if: inputs.candidate != 'true'
       env:
-        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
-        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        HACKAGE_USER: ${{ inputs.hackage_user }}
+        HACKAGE_PASSWORD: ${{ inputs.hackage_password }}
       run: |
         cabal upload --publish -u $HACKAGE_USER -p $HACKAGE_PASSWORD -d ./dist-newstyle/*-docs.tar.gz
 
@@ -81,7 +86,7 @@ runs:
       shell: bash
       if: inputs.candidate == 'true'
       env:
-        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
-        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+        HACKAGE_USER: ${{ inputs.hackage_user }}
+        HACKAGE_PASSWORD: ${{ inputs.hackage_password }}
       run: |
         cabal upload -u $HACKAGE_USER -p $HACKAGE_PASSWORD -d ./dist-newstyle/*-docs.tar.gz
