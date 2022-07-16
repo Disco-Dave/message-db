@@ -1,7 +1,7 @@
 name: "message-db-cd"
 
 on:
-  create:
+  push:
     tags:
       - "message-db/*"
 
