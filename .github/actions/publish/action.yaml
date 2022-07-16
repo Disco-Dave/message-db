@@ -1,0 +1,87 @@
+name: "Publish to Hackage"
+description: "Publish package to hackage"
+inputs:
+  cabal-version:
+    description: "Version of cabal to use"
+    required: false
+    default: "3.6.2"
+  ghc-version:
+    description: "Version of ghc to use"
+    required: false
+    default: "8.10.7"
+  package:
+    description: "Name of the package to publish"
+    required: true
+  candidate:
+    description: "Publish as a candidate release"
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell-cabal
+      name: Setup Haskell and Cabal
+      with:
+        ghc-version: "8.10.7"
+        cabal-version: "3.6"
+
+    - name: Freeze
+      shell: bash
+      run: |
+        cabal freeze
+        head -n -1 cabal.project.freeze > deps
+
+    - uses: actions/cache@v2.1.3
+      name: Cache ~/.cabal/store
+      shell: bash
+      with:
+        path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+        key: publish-${{ hashFiles('deps') }}
+
+    - name: "Bundle the package"
+      shell: bash
+      run: |
+        cabal sdist ${{ inputs.package }}
+
+    - name: "Bundle the documentation"
+      shell: bash
+      run: |
+        cabal haddock --haddock-for-hackage --enable-doc ${{ inputs.package }}
+
+    - name: "Publish package to Hackage"
+      shell: bash
+      if: inputs.candidate != 'true'
+      env:
+        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+      run: |
+        cabal upload --publish -u $HACKAGE_USER -p $HACKAGE_PASSWORD ./dist-newstyle/sdist/*.tar.gz
+
+    - name: "Publish candidate package to Hackage"
+      shell: bash
+      if: inputs.candidate == 'true'
+      env:
+        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+      run: |
+        cabal upload -u $HACKAGE_USER -p $HACKAGE_PASSWORD ./dist-newstyle/sdist/*.tar.gz
+
+    - name: "Publish docs to Hackage"
+      shell: bash
+      if: inputs.candidate != 'true'
+      env:
+        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+      run: |
+        cabal upload --publish -u $HACKAGE_USER -p $HACKAGE_PASSWORD -d ./dist-newstyle/*-docs.tar.gz
+
+    - name: "Publish candidate docs to Hackage"
+      shell: bash
+      if: inputs.candidate == 'true'
+      env:
+        HACKAGE_USER: ${{ secrets.HACKAGE_USER }}
+        HACKAGE_PASSWORD: ${{ secrets.HACKAGE_PASSWORD }}
+      run: |
+        cabal upload -u $HACKAGE_USER -p $HACKAGE_PASSWORD -d ./dist-newstyle/*-docs.tar.gz
