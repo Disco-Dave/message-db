@@ -43,7 +43,7 @@ runs:
       name: Cache ~/.cabal/store
       with:
         path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-        key: publish-${{ hashFiles('deps') }}
+        key: ${{ runner.os }}-${{ inputs.ghc-version }}-${{ inputs.cabal-version }}-${{ hashFiles('deps') }}
 
     - name: "Bundle the package"
       shell: bash
