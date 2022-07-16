@@ -30,7 +30,7 @@ runs:
       id: setup-haskell-cabal
       name: Setup Haskell and Cabal
       with:
-        ghc-version: ${{ inputs.ghc-verion }}
+        ghc-version: ${{ inputs.ghc-version }}
         cabal-version: ${{ inputs.cabal-version }}
 
     - name: Freeze
