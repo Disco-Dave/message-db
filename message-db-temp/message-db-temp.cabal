@@ -3,8 +3,8 @@ cabal-version: 3.0
 name: message-db-temp
 version: 0.0.1.0
 
-synopsis: Built on top of tmp-postgres to provide a temporary message db for integration testing
-description: See the readme at: https://github.com/Disco-Dave/message-db-temp#readme
+synopsis: Temporary message-db for integration testing
+description: See the readme on github for me info: https://github.com/Disco-Dave/message-db#readme
 
 build-type: Simple
 category: database, eventsourcing, eventstore, testing
@@ -17,6 +17,10 @@ maintainer: David Burkett
 copyright: 2022 David Burkett
 license: MIT
 license-file: LICENSE
+
+extra-source-files:
+  README.md
+  ChangeLog.md
 
 data-files: 
   , official-message-db-upstream/**/*.sh
