@@ -4,11 +4,11 @@ inputs:
   cabal-version:
     description: "Version of cabal to use"
     required: false
-    default: "3.6.2"
+    default: "3.6"
   ghc-version:
     description: "Version of ghc to use"
     required: false
-    default: "8.10.7"
+    default: "8.10"
   package:
     description: "Name of the package to publish"
     required: true
@@ -30,8 +30,8 @@ runs:
       id: setup-haskell-cabal
       name: Setup Haskell and Cabal
       with:
-        ghc-version: "8.10.7"
-        cabal-version: "3.6"
+        ghc-version: ${{ inputs.ghc-verion }}
+        cabal-version: ${{ inputs.cabal-version }}
 
     - name: Freeze
       shell: bash

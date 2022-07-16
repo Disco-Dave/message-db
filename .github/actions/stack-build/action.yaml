@@ -4,11 +4,11 @@ inputs:
   stack-version:
     description: "Version of stack to use"
     required: false
-    default: "2.7.3"
+    default: "2.7"
   resolver:
     description: "Resolver to use from stackage"
     required: false
-    default: "lts-19.7"
+    default: "lts-19"
   package:
     description: "Name of the package to build and test"
     required: true
