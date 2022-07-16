@@ -3,7 +3,7 @@ name: "message-db-cd"
 on:
   create:
     tags:
-      - "message-db/**"
+      - "message-db/*"
 
 jobs: 
   build:
