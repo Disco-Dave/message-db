@@ -4,8 +4,6 @@ Collection of libraries for interacting with [Eventide's Message DB](http://docs
 The purpose of these libraries are to make it easier to implement event sourcing 
 systems in Haskell.
 
----
-
 
 ## Repository Structure
 
@@ -31,9 +29,18 @@ Or if you already cloned the repo, then you may run the following inside of the 
 
 `git submodule update --init --recursive`
 
-You may also need some additional system dependencies, if you're on a debian based system then run the following:
+You may also need some additional system dependencies in order to build, if you're on a Debian based system then run the following:
 
 `apt update && apt install -y libpq-dev`
+
+If you also wish to run the test-suite, then you need to make sure that `initdb` is on your path. If you're on a `Debian` based system then run the following:
+
+```bash
+apt update && apt install -y postgresql
+export PATH=/usr/lib/postgresql/13/bin:$PATH
+```
+
+Note, your distro may have a postgresql version different from 13. If so replace the `13` in your `PATH` with the appropriate number.
 
 ### Cabal Instructions
 
