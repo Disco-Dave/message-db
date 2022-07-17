@@ -1,4 +1,4 @@
-module MessageDb.Subscription.Monad
+module MessageDb.Monad.Subscription
   ( subscriptionHandler
   , listToHandlers
   , makePositionStrategy

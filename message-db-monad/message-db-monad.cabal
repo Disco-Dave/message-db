@@ -86,8 +86,8 @@ library
   hs-source-dirs: src
 
   exposed-modules:
-    MessageDb.Functions.Monad
-    MessageDb.Subscription.Monad
+    MessageDb.Monad.Functions
+    MessageDb.Monad.Subscription
     MessageDb.Monad
 
   build-depends:

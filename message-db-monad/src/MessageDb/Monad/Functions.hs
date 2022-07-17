@@ -1,4 +1,4 @@
-module MessageDb.Functions.Monad
+module MessageDb.Monad.Functions
   ( lookupById
   , lookupByPosition
   , writeMessage
