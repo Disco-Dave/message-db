@@ -18,10 +18,6 @@ copyright: 2022 David Burkett
 license: MIT
 license-file: LICENSE
 
-data-files: 
-  , official-message-db-upstream/**/*.sh
-  , official-message-db-upstream/**/*.sql
-
 source-repository head
   type: git
   location: https://github.com/Disco-Dave/message-db.git
