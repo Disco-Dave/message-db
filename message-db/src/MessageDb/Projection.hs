@@ -1,7 +1,6 @@
 -- | A projection is an aggregation of all messages in a stream.
 module MessageDb.Projection
   ( Projection (..)
-  , Functions.BatchSize (..)
   , UnprocessedMessage (..)
   , Projected (..)
   , versionIncludingUnprocessed

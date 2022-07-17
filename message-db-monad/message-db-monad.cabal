@@ -86,23 +86,24 @@ library
   hs-source-dirs: src
 
   exposed-modules:
-    MessageDb.Monad.Functions
-    MessageDb.Monad.Subscription
     MessageDb.Monad
+    MessageDb.Monad.Functions
+    MessageDb.Monad.Projection
+    MessageDb.Monad.Subscription
 
   build-depends:
-    , aeson
+    , aeson >=1.5 && <2.1
     , bytestring >=0.10 && <0.12
     , containers >=0.6 && <0.7
     , exceptions >=0.10 && <0.11
-    , mtl
+    , message-db
+    , mtl >= 2.2 && <2.4
     , postgres-options >=0.2 && <0.3
     , postgresql-simple >=0.6 && <0.7
+    , resource-pool >=0.2 && <0.4
     , retry >=0.8 && <0.10
     , safe-exceptions >=0.1 && <0.2
     , tmp-postgres >=1.34 && <1.35
-    , transformers
+    , transformers >=0.4 && <0.6
     , typed-process >=0.2 && <0.3
-    , unliftio
-    , resource-pool
-    , message-db
+    , unliftio >=0.2 && <0.3
