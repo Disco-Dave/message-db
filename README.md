@@ -12,6 +12,9 @@ This repository contains the following packages:
 - [message-db-temp](./message-db-temp) - Creates temporary message-db instances using [tmp-postgres](https://hackage.haskell.org/package/tmp-postgres) and the [official message-db scripts](https://github.com/message-db/message-db). This package is also used by [message-db tests](./message-db/test/) for running integration tests.
 - [message-db-monad](./message-db-monad) - Utilizes [MonadUnliftIO](https://hackage.haskell.org/package/unliftio-core-0.2.0.1/docs/Control-Monad-IO-Unlift.html#t:MonadUnliftIO) to allow running message-db actions in a custom monad.
 
+## How to Get Help
+
+If you find a bug, have a feature request, or simply have a question then please [open an issue](https://github.com/Disco-Dave/message-db/issues/new).
 
 ## How to Build
 
@@ -40,7 +43,7 @@ apt update && apt install -y postgresql
 export PATH=/usr/lib/postgresql/13/bin:$PATH
 ```
 
-Note, your distro may have a postgresql version different from 13. If so, replace the `13` in your `PATH` with the appropriate number.
+Note, your distro may have a `postgresql` version different from 13. If so, replace the 13 in your `PATH` with the appropriate number.
 
 ### Cabal Instructions
 
@@ -55,3 +58,10 @@ Note, your distro may have a postgresql version different from 13. If so, replac
     - `stack init --resolver nightly`
 2. `stack build` - Builds _all_ packages.
 3. `stack test` - Runs the test-suite for _all_ packages.
+
+## Learn More about Eventide's Message DB
+
+- [Docs - Official Message DB user guide](http://docs.eventide-project.org/user-guide/message-db)
+- [Reference - Official postgres client in Ruby](https://github.com/eventide-project/message-store-postgres)
+- [Blog - Build Your Own Message DB Client](https://blog.eventide-project.org/articles/build-your-own-message-db-client/)
+- [Book - Practical Microservices](https://pragprog.com/titles/egmicro/practical-microservices/)
