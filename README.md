@@ -4,6 +4,7 @@ Collection of libraries for interacting with [Eventide's Message DB](http://docs
 The purpose of these libraries are to make it easier to implement event sourcing 
 systems in Haskell.
 
+For an example of how this library is used, please see [BankAccount.hs](./message-db/test/Examples/BankAccount.hs).
 
 ## Repository Structure
 
