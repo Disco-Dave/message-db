@@ -40,7 +40,7 @@ apt update && apt install -y postgresql
 export PATH=/usr/lib/postgresql/13/bin:$PATH
 ```
 
-Note, your distro may have a postgresql version different from 13. If so replace the `13` in your `PATH` with the appropriate number.
+Note, your distro may have a postgresql version different from 13. If so, replace the `13` in your `PATH` with the appropriate number.
 
 ### Cabal Instructions
 
@@ -50,8 +50,8 @@ Note, your distro may have a postgresql version different from 13. If so replace
 
 ### Stack Instructions
 1. `stack init` - Initializes the stack project. You can also specify a specific `resolver` instead:
-  - `stack init --resolver lts-18`
-  - `stack init --resolver lts-19`
-  - `stack init --resolver nightly`
+    - `stack init --resolver lts-18`
+    - `stack init --resolver lts-19`
+    - `stack init --resolver nightly`
 2. `stack build` - Builds _all_ packages.
 3. `stack test` - Runs the test-suite for _all_ packages.
