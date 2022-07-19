@@ -46,7 +46,7 @@ If you find a bug, have a feature request, or simply have a question then please
 
 Currently this project supports that last three major versions of `ghc` with `cabal`, and the last two major `lts` snapshots plus `nightly` for `stack`.
 
-If you need to setup `ghc`, `cabal`, or `stack`; then I'd highly recommend using [ghcup](https://www.haskell.org/ghcup/).
+If you need to setup `ghc`, `cabal`, or `stack`; then I highly recommend using [ghcup](https://www.haskell.org/ghcup/).
 
 ### Preparation
 
@@ -62,7 +62,7 @@ You may also need some additional system dependencies in order to build, if you'
 
 `apt update && apt install -y libpq-dev`
 
-If you also wish to run the test-suite, then you need to make sure that `initdb` is on your path. If you're on a `Debian` based system then run the following:
+If you also wish to run the test-suite, then you need to make sure that `initdb` is on your path. If you're on a Debian based system then run the following:
 
 ```bash
 apt update && apt install -y postgresql
