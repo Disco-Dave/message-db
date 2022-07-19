@@ -9,7 +9,7 @@ For an example of how this library is used, please see [BankAccount.hs](./messag
 ### Disclaimers
 - This library is an unofficial message-db client library for Haskell.
 - Only `message-db-temp` has been published to [hackage](https://hackage.haskell.org/package/message-db-temp) so far.
-- If you want to use the `message-db` or `message-db-monad` then you need to add the following:
+- If you want to use the `message-db` or `message-db-monad` packages then you need to add the following:
     - For `cabal` add the following to `cabal.project`
       ```cabal
       source-repository-package
