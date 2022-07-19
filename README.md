@@ -6,6 +6,31 @@ systems in Haskell.
 
 For an example of how this library is used, please see [BankAccount.hs](./message-db/test/Examples/BankAccount.hs).
 
+### Disclaimers
+- This library is an unofficial message-db client library for Haskell.
+- Only `message-db-temp` has been published to [hackage](https://hackage.haskell.org/package/message-db-temp) so far.
+- If you want to use the `message-db` or `message-db-monad` then you need to add the following:
+    - For `cabal` add the following to `cabal.project`
+      ```cabal
+      source-repository-package
+        type: git
+        location: https://github.com/Disco-Dave/message-db.git
+        tag: 359cb51b69efbf8f561c2709973db713c8154a34
+        subdir: 
+          message-db
+          message-db-monad
+      ```
+    - For `stack` add the follow to `stack.yaml`
+      ```yaml
+      extra-deps:
+        - git: https://github.com/Disco-Dave/message-db.git
+          commit: 359cb51b69efbf8f561c2709973db713c8154a34
+          subdirs: 
+            - message-db
+            - message-db-monad
+      ```
+    - Note: you may replace `359cb51b69efbf8f561c2709973db713c8154a34` with any git ref you want
+
 ## Repository Structure
 
 This repository contains the following packages:
