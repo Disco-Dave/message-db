@@ -23,6 +23,11 @@ runs:
         ghc-version: ${{ inputs.ghc-version }}
         cabal-version: ${{ inputs.cabal-version }}
 
+    - name: Configure Cabal settings
+      shell: bash
+      run: |
+        cabal configure -O0 --flags="pedantic"
+
     - name: Freeze
       shell: bash
       run: |
@@ -43,7 +48,7 @@ runs:
     - name: Build
       shell: bash
       run: |
-        cabal build ${{ inputs.package }} --flags="pedantic"
+        cabal build ${{ inputs.package }}
 
     - name: Test
       shell: bash

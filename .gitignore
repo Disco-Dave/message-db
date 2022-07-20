@@ -1,4 +1,5 @@
 **/cabal.project.local
+**/cabal.project.freeze
 **/dist-newstyle
 **/stack.yaml
 **/stack.yaml.lock
