@@ -44,7 +44,7 @@ runs:
     - name: Build
       shell: bash
       run: |
-        stack build ${{ inputs.package }} --test --bench --no-run-tests --no-run-benchmarks
+        stack build ${{ inputs.package }} --test --bench --no-run-tests --no-run-benchmarks --pedantic
 
     - name: Test
       shell: bash

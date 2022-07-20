@@ -43,7 +43,7 @@ runs:
     - name: Build
       shell: bash
       run: |
-        cabal build ${{ inputs.package }}
+        cabal build ${{ inputs.package }} --flags="pedantic"
 
     - name: Test
       shell: bash
