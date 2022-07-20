@@ -13,6 +13,7 @@ module MessageDb.Functions
   , parseExpectedVersionViolation
   , lookupById
   , lookupByPosition
+  , writeMessageWithId
   , writeMessage
   , getStreamMessages
   , getCategoryMessages
@@ -242,21 +243,19 @@ lookupByPosition connection position = do
   pure $ listToMaybe messages
 
 
--- | Write a JSON-formatted message to a named stream, optionally specifying JSON-formatted metadata and an expected version number.
-writeMessage ::
+writeMessageWithId ::
   ( Aeson.ToJSON payload
   , Aeson.ToJSON metadata
   ) =>
   Postgres.Connection ->
+  Message.MessageId ->
   StreamName ->
   Message.MessageType ->
   payload ->
   Maybe metadata ->
   Maybe ExpectedVersion ->
-  IO (Message.MessageId, Message.StreamPosition)
-writeMessage connection streamName messageType payload metadata expectedVersion = do
-  messageId <- Message.newMessageId
-
+  IO Message.StreamPosition
+writeMessageWithId connection messageId streamName messageType payload metadata expectedVersion = do
   let query =
         [sql|
           SELECT message_store.write_message (
@@ -288,7 +287,25 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
     handle handleSqlError $
       Postgres.query connection query params
 
-  pure (messageId, fromInteger position)
+  pure (fromInteger position)
+
+
+-- | Write a JSON-formatted message to a named stream, optionally specifying JSON-formatted metadata and an expected version number.
+writeMessage ::
+  ( Aeson.ToJSON payload
+  , Aeson.ToJSON metadata
+  ) =>
+  Postgres.Connection ->
+  StreamName ->
+  Message.MessageType ->
+  payload ->
+  Maybe metadata ->
+  Maybe ExpectedVersion ->
+  IO (Message.MessageId, Message.StreamPosition)
+writeMessage connection streamName messageType payload metadata expectedVersion = do
+  messageId <- Message.newMessageId
+  position <- writeMessageWithId connection messageId streamName messageType payload metadata expectedVersion
+  pure (messageId, position)
 
 
 -- | Retrieve messages from a single stream, optionally specifying the starting position, the number of messages to retrieve, and an additional condition that will be appended to the SQL command's WHERE clause.
