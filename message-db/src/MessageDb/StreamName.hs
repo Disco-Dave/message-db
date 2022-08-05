@@ -56,7 +56,7 @@ separator = '-'
 -- | A 'Category' represents everything in the 'StreamName' up to the first hyphen (-).
 -- For example, the category for the stream name, "account-1234", is "account".
 newtype Category = Category Text
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Semigroup)
   deriving (Show) via Text
 
 
@@ -94,7 +94,7 @@ newtype Identifier = Identifier
   { identifierNameToText :: Text
   -- ^ Convert from an 'Identifier' to a 'Text.
   }
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Semigroup)
   deriving (Show) via Text
 
 
