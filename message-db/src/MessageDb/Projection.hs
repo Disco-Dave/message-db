@@ -113,14 +113,14 @@ project messages =
 
 
 -- | Query a stream and project the messages.
-fetch' ::
-  forall state.
-  Functions.WithConnection ->
-  Functions.BatchSize ->
-  StreamName ->
-  Message.StreamPosition ->
-  Projection state ->
-  IO (Maybe (Projected state))
+fetch'
+  :: forall state
+   . Functions.WithConnection
+  -> Functions.BatchSize
+  -> StreamName
+  -> Message.StreamPosition
+  -> Projection state
+  -> IO (Maybe (Projected state))
 fetch' withConnection batchSize streamName startingPosition projection =
   let query position projected@Projected{state, unprocessed} = do
         messages <- withConnection $ \connection ->
@@ -154,13 +154,13 @@ fetch' withConnection batchSize streamName startingPosition projection =
 
 
 -- | Query a stream and project the messages.
-fetch ::
-  forall state.
-  Functions.WithConnection ->
-  Functions.BatchSize ->
-  StreamName ->
-  Projection state ->
-  IO (Maybe (Projected state))
+fetch
+  :: forall state
+   . Functions.WithConnection
+  -> Functions.BatchSize
+  -> StreamName
+  -> Projection state
+  -> IO (Maybe (Projected state))
 fetch withConnection batchSize streamName =
   fetch' withConnection batchSize streamName 0
 
@@ -217,15 +217,15 @@ recordSnapshot withConnection streamName snapshotState snapshotPosition expected
         (Just expectedVersion)
 
 
-fetchWithSnapshots ::
-  forall state.
-  (Aeson.ToJSON state, Aeson.FromJSON state) =>
-  Functions.WithConnection ->
-  Functions.BatchSize ->
-  StreamName ->
-  Projection state ->
-  SnapshotStreamName ->
-  IO (Maybe (Projected state))
+fetchWithSnapshots
+  :: forall state
+   . (Aeson.ToJSON state, Aeson.FromJSON state)
+  => Functions.WithConnection
+  -> Functions.BatchSize
+  -> StreamName
+  -> Projection state
+  -> SnapshotStreamName
+  -> IO (Maybe (Projected state))
 fetchWithSnapshots withConnection batchSize streamName projection snapshotStreamName = do
   previousSnapshotResult <- retrieveSnapshot @state withConnection snapshotStreamName
 

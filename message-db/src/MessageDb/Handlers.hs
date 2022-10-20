@@ -80,9 +80,9 @@ getMessage =
   ask
 
 
-getParsedMessage ::
-  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
-  Handler (Message.ParsedMessage payload metadata)
+getParsedMessage
+  :: (Aeson.FromJSON payload, Aeson.FromJSON metadata)
+  => Handler (Message.ParsedMessage payload metadata)
 getParsedMessage = do
   message <- ask
 
@@ -130,11 +130,11 @@ type ProjectionHandler state =
   Handler (Endo state)
 
 
-projectionHandler ::
-  forall payload metadata state.
-  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
-  (Message -> payload -> metadata -> state -> state) ->
-  ProjectionHandler state
+projectionHandler
+  :: forall payload metadata state
+   . (Aeson.FromJSON payload, Aeson.FromJSON metadata)
+  => (Message -> payload -> metadata -> state -> state)
+  -> ProjectionHandler state
 projectionHandler original = do
   message <- getMessage
   Message.ParsedMessage{..} <- getParsedMessage @payload @metadata
@@ -145,13 +145,13 @@ type ProjectionHandlers state =
   Handlers (Endo state)
 
 
-addProjectionHandler ::
-  forall payload metadata state.
-  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
-  Message.MessageType ->
-  (Message -> payload -> metadata -> state -> state) ->
-  ProjectionHandlers state ->
-  ProjectionHandlers state
+addProjectionHandler
+  :: forall payload metadata state
+   . (Aeson.FromJSON payload, Aeson.FromJSON metadata)
+  => Message.MessageType
+  -> (Message -> payload -> metadata -> state -> state)
+  -> ProjectionHandlers state
+  -> ProjectionHandlers state
 addProjectionHandler messageType original =
   addHandler messageType (projectionHandler original)
 
@@ -166,11 +166,11 @@ type SubscriptionHandler =
   Handler (IO ())
 
 
-subscriptionHandler ::
-  forall payload metadata.
-  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
-  (Message -> payload -> metadata -> IO ()) ->
-  SubscriptionHandler
+subscriptionHandler
+  :: forall payload metadata
+   . (Aeson.FromJSON payload, Aeson.FromJSON metadata)
+  => (Message -> payload -> metadata -> IO ())
+  -> SubscriptionHandler
 subscriptionHandler original = do
   message <- ask
   Message.ParsedMessage{..} <- getParsedMessage @payload @metadata
@@ -181,13 +181,13 @@ type SubscriptionHandlers =
   Handlers (IO ())
 
 
-addSubscriptionHandler ::
-  forall payload metadata.
-  (Aeson.FromJSON payload, Aeson.FromJSON metadata) =>
-  Message.MessageType ->
-  (Message -> payload -> metadata -> IO ()) ->
-  SubscriptionHandlers ->
-  SubscriptionHandlers
+addSubscriptionHandler
+  :: forall payload metadata
+   . (Aeson.FromJSON payload, Aeson.FromJSON metadata)
+  => Message.MessageType
+  -> (Message -> payload -> metadata -> IO ())
+  -> SubscriptionHandlers
+  -> SubscriptionHandlers
 addSubscriptionHandler messageType original =
   addHandler messageType (subscriptionHandler original)
 

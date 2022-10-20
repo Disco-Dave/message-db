@@ -14,13 +14,13 @@ import qualified MessageDb.Projection as Projection
 import qualified MessageDb.StreamName as Message
 
 
-fetch ::
-  ( MonadMessageDb m
-  , MonadIO m
-  ) =>
-  Message.StreamName ->
-  Projection state ->
-  m (Maybe (Projected state))
+fetch
+  :: ( MonadMessageDb m
+     , MonadIO m
+     )
+  => Message.StreamName
+  -> Projection state
+  -> m (Maybe (Projected state))
 fetch streamName projection = do
   MessageDbData{connectionPool, batchSize} <- getMessageDbData
 
@@ -32,16 +32,16 @@ fetch streamName projection = do
       projection
 
 
-fetchWithSnapshots ::
-  ( MonadMessageDb m
-  , MonadIO m
-  , Aeson.ToJSON state
-  , Aeson.FromJSON state
-  ) =>
-  Message.StreamName ->
-  Projection state ->
-  SnapshotStreamName ->
-  m (Maybe (Projected state))
+fetchWithSnapshots
+  :: ( MonadMessageDb m
+     , MonadIO m
+     , Aeson.ToJSON state
+     , Aeson.FromJSON state
+     )
+  => Message.StreamName
+  -> Projection state
+  -> SnapshotStreamName
+  -> m (Maybe (Projected state))
 fetchWithSnapshots streamName projection snapshotStreamName = do
   MessageDbData{connectionPool, batchSize} <- getMessageDbData
 

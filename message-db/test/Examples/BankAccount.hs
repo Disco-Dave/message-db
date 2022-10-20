@@ -535,17 +535,17 @@ send accountId command = do
 
 
 -- | Function that helps convert our pure functions, 'command -> BankAccount -> Either failure success', into a subscription command handler.
-handleCommand ::
-  forall command failure success.
-  ( Typeable failure
-  , Aeson.ToJSON failure
-  , Typeable success
-  , Aeson.ToJSON success
-  , Aeson.FromJSON command
-  ) =>
-  (forall a. TestApp a -> IO a) ->
-  (command -> BankAccount -> TestApp (Either failure success)) ->
-  Handlers.SubscriptionHandler
+handleCommand
+  :: forall command failure success
+   . ( Typeable failure
+     , Aeson.ToJSON failure
+     , Typeable success
+     , Aeson.ToJSON success
+     , Aeson.FromJSON command
+     )
+  => (forall a. TestApp a -> IO a)
+  -> (command -> BankAccount -> TestApp (Either failure success))
+  -> Handlers.SubscriptionHandler
 handleCommand runInIO processCommand =
   Handlers.subscriptionHandler @_ @Message.Metadata $ \Message{messageStream, messageGlobalPosition} command _ -> do
     Just accountId <- pure . coerce $ StreamName.identifierOfStream messageStream

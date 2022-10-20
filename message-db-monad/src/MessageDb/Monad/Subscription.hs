@@ -29,14 +29,14 @@ import qualified MessageDb.Subscription.PositionStrategy as PositionStrategy
 import UnliftIO (MonadUnliftIO (withRunInIO))
 
 
-subscriptionHandler ::
-  forall payload metadata m.
-  ( Aeson.FromJSON payload
-  , Aeson.FromJSON metadata
-  , MonadUnliftIO m
-  ) =>
-  (Message -> payload -> metadata -> m ()) ->
-  m Handlers.SubscriptionHandler
+subscriptionHandler
+  :: forall payload metadata m
+   . ( Aeson.FromJSON payload
+     , Aeson.FromJSON metadata
+     , MonadUnliftIO m
+     )
+  => (Message -> payload -> metadata -> m ())
+  -> m Handlers.SubscriptionHandler
 subscriptionHandler handler =
   withRunInIO $ \runInIO ->
     pure (Handlers.subscriptionHandler (\msg pay meta -> runInIO $ handler msg pay meta))
@@ -48,11 +48,11 @@ listToHandlers list =
     fmap (messageType,) handler
 
 
-makePositionStrategy ::
-  MonadUnliftIO m =>
-  m Message.GlobalPosition ->
-  (PositionStrategy.LastPositionSaved -> PositionStrategy.CurrentPosition -> m (Maybe PositionStrategy.PositionSaved)) ->
-  m PositionStrategy
+makePositionStrategy
+  :: MonadUnliftIO m
+  => m Message.GlobalPosition
+  -> (PositionStrategy.LastPositionSaved -> PositionStrategy.CurrentPosition -> m (Maybe PositionStrategy.PositionSaved))
+  -> m PositionStrategy
 makePositionStrategy restore save =
   withRunInIO $ \runInIO ->
     pure $

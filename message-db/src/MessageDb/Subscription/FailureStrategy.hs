@@ -46,11 +46,11 @@ instance Monoid FailureStrategy where
 
 
 -- | Write a failure to a category. Use @shouldKeep@ to filter out message failures you don't want to log.
-writeToCategory ::
-  (FailureReason -> Bool) ->
-  Functions.WithConnection ->
-  StreamName.Category ->
-  FailureStrategy
+writeToCategory
+  :: (FailureReason -> Bool)
+  -> Functions.WithConnection
+  -> StreamName.Category
+  -> FailureStrategy
 writeToCategory shouldKeep withConnection categoryName =
   let logFailureToCategory payload@FailedMessage{..} =
         when (shouldKeep failedReason) $ do

@@ -38,65 +38,65 @@ lookupByPosition position =
     Functions.lookupByPosition connection position
 
 
-writeMessage ::
-  ( Aeson.ToJSON payload
-  , Aeson.ToJSON metadata
-  , MonadIO m
-  , MonadMessageDb m
-  ) =>
-  StreamName ->
-  Message.MessageType ->
-  payload ->
-  Maybe metadata ->
-  Maybe Functions.ExpectedVersion ->
-  m (Message.MessageId, Message.StreamPosition)
+writeMessage
+  :: ( Aeson.ToJSON payload
+     , Aeson.ToJSON metadata
+     , MonadIO m
+     , MonadMessageDb m
+     )
+  => StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe metadata
+  -> Maybe Functions.ExpectedVersion
+  -> m (Message.MessageId, Message.StreamPosition)
 writeMessage streamName messageType payload metadata expectedVersion = do
   MessageDb.withConnection $ \connection ->
     Functions.writeMessage connection streamName messageType payload metadata expectedVersion
 
 
-writeMessageWithId ::
-  ( Aeson.ToJSON payload
-  , Aeson.ToJSON metadata
-  , MonadIO m
-  , MonadMessageDb m
-  ) =>
-  Message.MessageId ->
-  StreamName ->
-  Message.MessageType ->
-  payload ->
-  Maybe metadata ->
-  Maybe Functions.ExpectedVersion ->
-  m Message.StreamPosition
+writeMessageWithId
+  :: ( Aeson.ToJSON payload
+     , Aeson.ToJSON metadata
+     , MonadIO m
+     , MonadMessageDb m
+     )
+  => Message.MessageId
+  -> StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe metadata
+  -> Maybe Functions.ExpectedVersion
+  -> m Message.StreamPosition
 writeMessageWithId messageId streamName messageType payload metadata expectedVersion = do
   MessageDb.withConnection $ \connection ->
     Functions.writeMessageWithId connection messageId streamName messageType payload metadata expectedVersion
 
 
-getStreamMessages ::
-  ( MonadIO m
-  , MonadMessageDb m
-  ) =>
-  StreamName ->
-  Maybe Message.StreamPosition ->
-  Maybe Functions.Condition ->
-  m [Message]
+getStreamMessages
+  :: ( MonadIO m
+     , MonadMessageDb m
+     )
+  => StreamName
+  -> Maybe Message.StreamPosition
+  -> Maybe Functions.Condition
+  -> m [Message]
 getStreamMessages streamName position condition = do
   batchSize <- fmap (Just . getBatchSize) getMessageDbData
   MessageDb.withConnection $ \connection ->
     Functions.getStreamMessages connection streamName position batchSize condition
 
 
-getCategoryMessages ::
-  ( MonadIO m
-  , MonadMessageDb m
-  ) =>
-  StreamName.Category ->
-  Maybe Message.GlobalPosition ->
-  Maybe Functions.Correlation ->
-  Maybe Functions.ConsumerGroup ->
-  Maybe Functions.Condition ->
-  m [Message]
+getCategoryMessages
+  :: ( MonadIO m
+     , MonadMessageDb m
+     )
+  => StreamName.Category
+  -> Maybe Message.GlobalPosition
+  -> Maybe Functions.Correlation
+  -> Maybe Functions.ConsumerGroup
+  -> Maybe Functions.Condition
+  -> m [Message]
 getCategoryMessages category position correlation consumerGroup condition = do
   batchSize <- fmap (Just . getBatchSize) getMessageDbData
   MessageDb.withConnection $ \connection ->

@@ -243,18 +243,18 @@ lookupByPosition connection position = do
   pure $ listToMaybe messages
 
 
-writeMessageWithId ::
-  ( Aeson.ToJSON payload
-  , Aeson.ToJSON metadata
-  ) =>
-  Postgres.Connection ->
-  Message.MessageId ->
-  StreamName ->
-  Message.MessageType ->
-  payload ->
-  Maybe metadata ->
-  Maybe ExpectedVersion ->
-  IO Message.StreamPosition
+writeMessageWithId
+  :: ( Aeson.ToJSON payload
+     , Aeson.ToJSON metadata
+     )
+  => Postgres.Connection
+  -> Message.MessageId
+  -> StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe metadata
+  -> Maybe ExpectedVersion
+  -> IO Message.StreamPosition
 writeMessageWithId connection messageId streamName messageType payload metadata expectedVersion = do
   let query =
         [sql|
@@ -291,17 +291,17 @@ writeMessageWithId connection messageId streamName messageType payload metadata 
 
 
 -- | Write a JSON-formatted message to a named stream, optionally specifying JSON-formatted metadata and an expected version number.
-writeMessage ::
-  ( Aeson.ToJSON payload
-  , Aeson.ToJSON metadata
-  ) =>
-  Postgres.Connection ->
-  StreamName ->
-  Message.MessageType ->
-  payload ->
-  Maybe metadata ->
-  Maybe ExpectedVersion ->
-  IO (Message.MessageId, Message.StreamPosition)
+writeMessage
+  :: ( Aeson.ToJSON payload
+     , Aeson.ToJSON metadata
+     )
+  => Postgres.Connection
+  -> StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe metadata
+  -> Maybe ExpectedVersion
+  -> IO (Message.MessageId, Message.StreamPosition)
 writeMessage connection streamName messageType payload metadata expectedVersion = do
   messageId <- Message.newMessageId
   position <- writeMessageWithId connection messageId streamName messageType payload metadata expectedVersion
@@ -309,13 +309,13 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
 
 
 -- | Retrieve messages from a single stream, optionally specifying the starting position, the number of messages to retrieve, and an additional condition that will be appended to the SQL command's WHERE clause.
-getStreamMessages ::
-  Postgres.Connection ->
-  StreamName ->
-  Maybe Message.StreamPosition ->
-  Maybe BatchSize ->
-  Maybe Condition ->
-  IO [Message]
+getStreamMessages
+  :: Postgres.Connection
+  -> StreamName
+  -> Maybe Message.StreamPosition
+  -> Maybe BatchSize
+  -> Maybe Condition
+  -> IO [Message]
 getStreamMessages connection streamName position batchSize condition =
   let query =
         [sql|
@@ -345,15 +345,15 @@ getStreamMessages connection streamName position batchSize condition =
 
 
 -- | Retrieve messages from a category of streams, optionally specifying the starting position, the number of messages to retrieve, the correlation category for Pub/Sub, consumer group parameters, and an additional condition that will be appended to the SQL command's WHERE clause.
-getCategoryMessages ::
-  Postgres.Connection ->
-  Category ->
-  Maybe Message.GlobalPosition ->
-  Maybe BatchSize ->
-  Maybe Correlation ->
-  Maybe ConsumerGroup ->
-  Maybe Condition ->
-  IO [Message]
+getCategoryMessages
+  :: Postgres.Connection
+  -> Category
+  -> Maybe Message.GlobalPosition
+  -> Maybe BatchSize
+  -> Maybe Correlation
+  -> Maybe ConsumerGroup
+  -> Maybe Condition
+  -> IO [Message]
 getCategoryMessages connection category position batchSize correlation consumerGroup condition =
   let query =
         [sql|

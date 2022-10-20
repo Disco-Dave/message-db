@@ -1,8 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module MessageDb.Temp
-  ( ConnectionStrings (..),
-    withConnectionStrings,
+  ( ConnectionStrings (..)
+  , withConnectionStrings
   )
 where
 
