@@ -68,7 +68,7 @@ writeToCategory shouldKeep withConnection categoryName =
             Functions.writeMessage
               connection
               streamName
-              FailedMessage.messageType
+              (Message.messageTypeOf @FailedMessage)
               payload
               (Just metadata)
               Nothing

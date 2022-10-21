@@ -2,7 +2,7 @@ module MessageDb.Message
   ( MessageId (..)
   , newMessageId
   , MessageType (..)
-  , messageTypeOf
+  , HasMessageType (..)
   , StreamPosition (..)
   , GlobalPosition (..)
   , CreatedAt (..)
@@ -16,6 +16,7 @@ module MessageDb.Message
   , ParseMessageFailure (..)
   , ParsedMessage (..)
   , parseMessage
+  , parseMessage_
   )
 where
 
@@ -23,6 +24,7 @@ import Control.Exception (Exception)
 import Data.Aeson ((.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
+import Data.Bifunctor (Bifunctor (first))
 import qualified Data.ByteString.Lazy.Char8 as Char8
 import Data.Coerce (coerce)
 import Data.Proxy (Proxy (..))
@@ -40,10 +42,11 @@ import Numeric.Natural (Natural)
 -- * JSON Helpers
 
 
-parseJson :: Aeson.FromJSON value => Aeson.Value -> Either String value
+parseJson :: Aeson.FromJSON value => Aeson.Value -> Either Text value
 parseJson column =
   let json = coerce column
-   in AesonTypes.parseEither Aeson.parseJSON json
+      parsedResult = AesonTypes.parseEither Aeson.parseJSON json
+   in first Text.pack parsedResult
 
 
 showValue :: Aeson.Value -> String
@@ -92,11 +95,12 @@ newtype MessageType = MessageType
     via Text
 
 
--- | Converts a type's name to a 'MessageType'. For example 'typeOf @Bool' will be 'MessageType "Bool"'.
-messageTypeOf :: forall payload. Typeable payload => MessageType
-messageTypeOf =
-  let eventName = Text.pack . show . typeRep $ Proxy @payload
-   in MessageType eventName
+class HasMessageType message where
+  messageTypeOf :: MessageType
+  default messageTypeOf :: Typeable message => MessageType
+  messageTypeOf =
+    let messageType = Text.pack . show . typeRep $ Proxy @message
+     in MessageType messageType
 
 
 -- * Stream Position
@@ -181,7 +185,7 @@ nullPayload =
   Payload Aeson.Null
 
 
-parsePayload :: Aeson.FromJSON value => Payload -> Either String value
+parsePayload :: Aeson.FromJSON value => Payload -> Either Text value
 parsePayload =
   parseJson . payloadToValue
 
@@ -209,7 +213,7 @@ nullMetadata =
   Metadata Aeson.Null
 
 
-parseMetadata :: Aeson.FromJSON value => Metadata -> Either String value
+parseMetadata :: Aeson.FromJSON value => Metadata -> Either Text value
 parseMetadata =
   parseJson . metadataToValue
 
@@ -258,25 +262,15 @@ instance Aeson.FromJSON Message where
     messageCreatedAt <- object .: "createdAt"
     messagePayload <- object .:? "payload" .!= nullPayload
     messageMetadata <- object .:? "metadata" .!= nullMetadata
-    pure
-      Message
-        { messageId = messageId
-        , messageStream = messageStream
-        , messageType = messageType
-        , messageStreamPosition = messageStreamPosition
-        , messageGlobalPosition = messageGlobalPosition
-        , messageCreatedAt = messageCreatedAt
-        , messagePayload = messagePayload
-        , messageMetadata = messageMetadata
-        }
+    pure Message{..}
 
 
 -- * Parsed Message
 
 
 data ParseMessageFailure = ParseMessageFailure
-  { failedPayloadReason :: Maybe String
-  , failedMetadataReason :: Maybe String
+  { failedPayloadReason :: Maybe Text
+  , failedMetadataReason :: Maybe Text
   }
   deriving (Show, Eq)
 
@@ -294,10 +288,10 @@ instance Aeson.ToJSON ParseMessageFailure where
 
 
 instance Aeson.FromJSON ParseMessageFailure where
-  parseJSON = Aeson.withObject "ParseMessageFailure" $ \object ->
-    ParseMessageFailure
-      <$> object .: "failedPayloadReason"
-      <*> object .: "failedMetadataReason"
+  parseJSON = Aeson.withObject "ParseMessageFailure" $ \object -> do
+    failedPayloadReason <- object .: "failedPayloadReason"
+    failedMetadataReason <- object .: "failedMetadataReason"
+    pure ParseMessageFailure{..}
 
 
 instance Exception ParseMessageFailure
@@ -322,3 +316,8 @@ parseMessage Message{messagePayload, messageMetadata} =
               { failedPayloadReason = toMaybe payloadResult
               , failedMetadataReason = toMaybe metadataResult
               }
+
+
+parseMessage_ :: (Aeson.FromJSON payload) => Message -> Either Text payload
+parseMessage_ =
+  parsePayload . messagePayload

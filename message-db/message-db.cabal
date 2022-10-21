@@ -36,6 +36,7 @@ common shared
 
   default-extensions:
     AllowAmbiguousTypes
+    DefaultSignatures
     DeriveFunctor
     DeriveGeneric
     DerivingVia

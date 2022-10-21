@@ -53,7 +53,6 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import qualified Data.Time as Time
-import Data.Typeable (Typeable)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID.V4
 import GHC.Generics (Generic)
@@ -194,6 +193,7 @@ newtype Open = Open
 
 instance Aeson.ToJSON Open
 instance Aeson.FromJSON Open
+instance Message.HasMessageType Open
 
 
 -- | The event from successfully opening an account
@@ -201,6 +201,9 @@ newtype Opened = Opened
   { openedBalance :: Money
   }
   deriving (Show, Eq, Generic)
+
+
+instance Message.HasMessageType Opened
 
 
 instance Aeson.ToJSON Opened
@@ -227,6 +230,7 @@ newtype OpenRejected = OpenRejected
 
 instance Aeson.ToJSON OpenRejected
 instance Aeson.FromJSON OpenRejected
+instance Message.HasMessageType OpenRejected
 
 
 -- | Handle an 'Open' account command.
@@ -262,6 +266,7 @@ data Close = Close
 
 instance Aeson.ToJSON Close
 instance Aeson.FromJSON Close
+instance Message.HasMessageType Close
 
 
 -- | The event from successfully closing an account.
@@ -271,6 +276,7 @@ data Closed = Closed
 
 instance Aeson.ToJSON Closed
 instance Aeson.FromJSON Closed
+instance Message.HasMessageType Closed
 
 
 -- | The reason why the 'Close' command failed.
@@ -293,6 +299,7 @@ newtype CloseRejected = CloseRejected
 
 instance Aeson.ToJSON CloseRejected
 instance Aeson.FromJSON CloseRejected
+instance Message.HasMessageType CloseRejected
 
 
 -- | Handle the command to close a bank account.
@@ -329,6 +336,7 @@ newtype Deposit = Deposit
 
 instance Aeson.ToJSON Deposit
 instance Aeson.FromJSON Deposit
+instance Message.HasMessageType Deposit
 
 
 -- | The event from successfully depositing money.
@@ -340,6 +348,7 @@ newtype Deposited = Deposited
 
 instance Aeson.ToJSON Deposited
 instance Aeson.FromJSON Deposited
+instance Message.HasMessageType Deposited
 
 
 -- | The reason why a 'Deposit' command was rejected.
@@ -362,6 +371,7 @@ data DepositRejected = DepositRejected
 
 instance Aeson.ToJSON DepositRejected
 instance Aeson.FromJSON DepositRejected
+instance Message.HasMessageType DepositRejected
 
 
 -- | Handle the command to deposit money into the bank account.
@@ -394,6 +404,7 @@ newtype Withdraw = Withdraw
 
 instance Aeson.ToJSON Withdraw
 instance Aeson.FromJSON Withdraw
+instance Message.HasMessageType Withdraw
 
 
 -- | The event from successfully withdrawing money.
@@ -405,6 +416,7 @@ newtype Withdrawn = Withdrawn
 
 instance Aeson.ToJSON Withdrawn
 instance Aeson.FromJSON Withdrawn
+instance Message.HasMessageType Withdrawn
 
 
 -- | The reason why a 'Withdraw' command failed.
@@ -429,6 +441,7 @@ data WithdrawRejected = WithdrawRejected
 
 instance Aeson.ToJSON WithdrawRejected
 instance Aeson.FromJSON WithdrawRejected
+instance Message.HasMessageType WithdrawRejected
 
 
 -- | Handle the request to withdraw money.
@@ -520,7 +533,7 @@ fetch accountId = do
 
 
 -- | Send a command to be asynchronously processed for a 'BankAccount'.
-send :: forall command. (Aeson.ToJSON command, Typeable command) => AccountId -> command -> TestApp ()
+send :: forall command. (Aeson.ToJSON command, Message.HasMessageType command) => AccountId -> command -> TestApp ()
 send accountId command = do
   TestAppData{connectionPool} <- ask
 
@@ -537,9 +550,9 @@ send accountId command = do
 -- | Function that helps convert our pure functions, 'command -> BankAccount -> Either failure success', into a subscription command handler.
 handleCommand
   :: forall command failure success
-   . ( Typeable failure
+   . ( Message.HasMessageType failure
      , Aeson.ToJSON failure
-     , Typeable success
+     , Message.HasMessageType success
      , Aeson.ToJSON success
      , Aeson.FromJSON command
      )

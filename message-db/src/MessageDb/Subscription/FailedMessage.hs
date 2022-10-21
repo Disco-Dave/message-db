@@ -2,7 +2,6 @@
 module MessageDb.Subscription.FailedMessage
   ( FailedMessage (..)
   , FailureReason (..)
-  , messageType
   , handleFailures
   )
 where
@@ -39,10 +38,7 @@ data FailedMessage = FailedMessage
   deriving (Show, Eq)
 
 
--- | The message type of a 'FailedMessage'.
-messageType :: Message.MessageType
-messageType =
-  Message.messageTypeOf @FailedMessage
+instance Message.HasMessageType FailedMessage
 
 
 toKeyValues :: Aeson.KeyValue keyValue => FailedMessage -> [keyValue]
@@ -72,4 +68,4 @@ handleFailures originalHandlers =
         Message.ParsedMessage{parsedPayload} <- Handlers.getParsedMessage @FailedMessage @Message.Metadata
         let originalMessage = failedMessage parsedPayload
          in liftEither $ Handlers.handle originalHandlers originalMessage
-   in Handlers.addHandler messageType failedMessageHandle Handlers.emptyHandlers
+   in Handlers.addHandler (Message.messageTypeOf @FailedMessage) failedMessageHandle Handlers.emptyHandlers

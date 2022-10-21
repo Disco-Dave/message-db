@@ -29,6 +29,7 @@ newtype ComputeInterest = ComputeInterest
   deriving (Show, Eq, Generic)
 instance Aeson.ToJSON ComputeInterest
 instance Aeson.FromJSON ComputeInterest
+instance Message.HasMessageType ComputeInterest
 
 
 newtype InterestComputed = InterestComputed
@@ -37,6 +38,7 @@ newtype InterestComputed = InterestComputed
   deriving (Show, Eq, Generic)
 instance Aeson.ToJSON InterestComputed
 instance Aeson.FromJSON InterestComputed
+instance Message.HasMessageType InterestComputed
 
 
 computeInterest :: Bool -> Functions.WithConnection -> Message -> ComputeInterest -> Message.Metadata -> IO ()
