@@ -1,39 +1,47 @@
 cabal-version: 3.0
 
+
 name: message-db-temp
 version: 0.0.1.0
 
+
 synopsis: Temporary message-db for integration testing
 description: See the readme on github for me info: https://github.com/Disco-Dave/message-db/tree/main/message-db-temp#readme
+
 
 build-type: Simple
 category: database, eventsourcing, eventstore, testing
 homepage: https://github.com/Disco-Dave/message-db
 bug-reports:https://github.com/Disco-Dave/message-db/issues
 
+
 author: David Burkett
 maintainer: David Burkett
-
 copyright: 2022 David Burkett
 license: MIT
 license-file: LICENSE
+
 
 extra-source-files:
   README.md
   ChangeLog.md
 
+
 data-files: 
   , official-message-db-upstream/**/*.sh
   , official-message-db-upstream/**/*.sql
+
 
 source-repository head
   type: git
   location: https://github.com/Disco-Dave/message-db.git
 
+
 flag pedantic
   default: False
   description: Enables @-Werror@, which turns warnings into errors.
   manual: True
+
 
 common shared
   default-language: Haskell2010
