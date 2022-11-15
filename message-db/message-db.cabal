@@ -151,7 +151,7 @@ test-suite message-db-test
     , message-db-temp
     , mtl
     , postgresql-simple
-    , resource-pool >=0.3 && <0.4
+    , resource-pool >=0.2 && <0.4
     , text
     , time
     , unliftio >=0.2 && <0.3

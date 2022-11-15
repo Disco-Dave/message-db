@@ -22,8 +22,11 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural (Natural)
 
+#if MIN_VERSION_aeson(2, 0, 0)
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Key as Key
+#endif
+
 import qualified Data.HashMap.Strict as HashMap
 
 -- Only here to silence the warning about unordered-containers not being

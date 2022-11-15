@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module TestApp
   ( TestAppData (..)
   , withTestAppData
@@ -46,13 +48,7 @@ withTestAppData =
       let createPool =
             let createConnection = Postgres.connectPostgreSQL normalConnectionString
                 destroyConnection = Postgres.close
-             in Pool.newPool $
-                  Pool.PoolConfig
-                    { createResource = createConnection
-                    , freeResource = destroyConnection
-                    , poolCacheTTL = 60
-                    , poolMaxResources = 1
-                    }
+             in Pool.createPool createConnection destroyConnection 1 15 2
 
           destroyPool =
             Pool.destroyAllResources
