@@ -11,6 +11,7 @@ module TestApp
   )
 where
 
+import Control.Monad (when)
 import Control.Monad.Cont (ContT (ContT, runContT))
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader (ask), ReaderT (runReaderT))
@@ -45,7 +46,13 @@ withTestAppData =
       let createPool =
             let createConnection = Postgres.connectPostgreSQL normalConnectionString
                 destroyConnection = Postgres.close
-             in Pool.createPool createConnection destroyConnection 1 15 2
+             in Pool.newPool $
+                  Pool.PoolConfig
+                    { createResource = createConnection
+                    , freeResource = destroyConnection
+                    , poolCacheTTL = 60
+                    , poolMaxResources = 1
+                    }
 
           destroyPool =
             Pool.destroyAllResources
@@ -117,11 +124,9 @@ blockUntilStreamHas streamName numberOfMessages = do
 
   let currentNumberOfMessages = NumberOfMessages . fromIntegral $ length messages
 
-  if currentNumberOfMessages < numberOfMessages
-    then do
-      threadDelay 100_000
-      blockUntilStreamHas streamName numberOfMessages
-    else pure ()
+  when (currentNumberOfMessages < numberOfMessages) $ do
+    threadDelay 100_000
+    blockUntilStreamHas streamName numberOfMessages
 
 
 blockUntilCategoryHas :: Category -> NumberOfMessages -> TestApp ()
@@ -139,8 +144,6 @@ blockUntilCategoryHas categoryName numberOfMessages = do
 
   let currentNumberOfMessages = NumberOfMessages . fromIntegral $ length messages
 
-  if currentNumberOfMessages < numberOfMessages
-    then do
-      threadDelay 50_000
-      blockUntilCategoryHas categoryName numberOfMessages
-    else pure ()
+  when (currentNumberOfMessages < numberOfMessages) $ do
+    threadDelay 50_000
+    blockUntilCategoryHas categoryName numberOfMessages

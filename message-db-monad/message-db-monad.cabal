@@ -91,7 +91,7 @@ library
   hs-source-dirs: src
 
   build-depends:
-    , aeson >=1.5 && <2.1
+    , aeson >=1.5 && <2.2
     , exceptions >=0.10 && <0.11
     , message-db
     , mtl >= 2.2 && <2.4
