@@ -2,7 +2,7 @@ module MessageDb.Subscription.PositionStrategySpec (spec) where
 
 import Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.MVar as MVar
-import Control.Monad (replicateM_)
+import Control.Monad (replicateM_, unless)
 import Control.Monad.Reader (ask)
 import Data.Coerce (coerce)
 import qualified Data.Pool as Pool
@@ -101,9 +101,7 @@ spec =
                     Nothing
                     Nothing
 
-                if length messages >= numberOfMessages
-                  then pure ()
-                  else check
+                unless (length messages >= numberOfMessages) check
            in check
 
         TestApp.runWith testAppData $
