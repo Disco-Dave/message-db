@@ -1,17 +1,23 @@
 name: "Build Haskell - Stack"
 description: "Build haskell project with stack"
+
+
 inputs:
+
   stack-version:
     description: "Version of stack to use"
     required: false
-    default: "2.7"
+    default: "2.9.1"
+
   resolver:
     description: "Resolver to use from stackage"
     required: false
-    default: "lts-19"
+    default: "nightly"
+
   package:
     description: "Name of the package to build and test"
     required: true
+
 
 runs:
   using: "composite"
@@ -34,19 +40,18 @@ runs:
       shell: bash
       run: |
         stack init --resolver "${{ inputs.resolver }}"
-        stack setup
 
     - name: Install dependencies
       shell: bash
       run: |
-        stack build ${{ inputs.package }} --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
+        stack build ${{ inputs.package }} --fast --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
 
     - name: Build
       shell: bash
       run: |
-        stack build ${{ inputs.package }} --test --bench --no-run-tests --no-run-benchmarks --pedantic
+        stack build ${{ inputs.package }} --fast --pedantic --test --bench --no-run-tests --no-run-benchmarks
 
     - name: Test
       shell: bash
       run: |
-        stack test ${{ inputs.package }}
+        stack test ${{ inputs.package }} --fast --pedantic

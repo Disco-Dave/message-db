@@ -1,27 +1,36 @@
 name: "Publish to Hackage"
 description: "Publish package to hackage"
+
+
 inputs:
+
   cabal-version:
     description: "Version of cabal to use"
     required: false
-    default: "3.6"
+    default: "3.6.2.0"
+
   ghc-version:
     description: "Version of ghc to use"
     required: false
-    default: "8.10"
+    default: "8.10.7"
+
   package:
     description: "Name of the package to publish"
     required: true
+
   candidate:
     description: "Publish as a candidate release"
     required: false
     default: "true"
+
   hackage_user:
     description: "username for hackage"
     required: true
+
   hackage_password:
     description: "password for hackage"
     required: true
+
 
 runs:
   using: "composite"
@@ -43,7 +52,7 @@ runs:
       name: Cache ~/.cabal/store
       with:
         path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-        key: ${{ runner.os }}-${{ inputs.ghc-version }}-${{ inputs.cabal-version }}-${{ hashFiles('deps') }}
+        key: ${{ runner.os }}-${{ inputs.ghc-version }}-${{ hashFiles('deps') }}
 
     - name: "Bundle the package"
       shell: bash
