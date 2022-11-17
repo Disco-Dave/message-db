@@ -2,11 +2,13 @@ module MessageDb.Monad.Functions
   ( lookupById
   , lookupByPosition
   , writeMessage
+  , writeMessage_
+  , writeMessageWithId
+  , writeMessageWithId_
   , getStreamMessages
   , getCategoryMessages
   , getLastStreamMessage
   , streamVersion
-  , writeMessageWithId
   )
 where
 
@@ -55,6 +57,21 @@ writeMessage streamName messageType payload metadata expectedVersion = do
     Functions.writeMessage connection streamName messageType payload metadata expectedVersion
 
 
+writeMessage_
+  :: ( Aeson.ToJSON payload
+     , MonadIO m
+     , MonadMessageDb m
+     )
+  => StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe Functions.ExpectedVersion
+  -> m (Message.MessageId, Message.StreamPosition)
+writeMessage_ streamName messageType payload expectedVersion = do
+  MessageDb.withConnection $ \connection ->
+    Functions.writeMessage_ connection streamName messageType payload expectedVersion
+
+
 writeMessageWithId
   :: ( Aeson.ToJSON payload
      , Aeson.ToJSON metadata
@@ -71,6 +88,22 @@ writeMessageWithId
 writeMessageWithId messageId streamName messageType payload metadata expectedVersion = do
   MessageDb.withConnection $ \connection ->
     Functions.writeMessageWithId connection messageId streamName messageType payload metadata expectedVersion
+
+
+writeMessageWithId_
+  :: ( Aeson.ToJSON payload
+     , MonadIO m
+     , MonadMessageDb m
+     )
+  => Message.MessageId
+  -> StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe Functions.ExpectedVersion
+  -> m Message.StreamPosition
+writeMessageWithId_ messageId streamName messageType payload expectedVersion = do
+  MessageDb.withConnection $ \connection ->
+    Functions.writeMessageWithId_ connection messageId streamName messageType payload expectedVersion
 
 
 getStreamMessages
