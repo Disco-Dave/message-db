@@ -14,7 +14,9 @@ module MessageDb.Functions
   , lookupById
   , lookupByPosition
   , writeMessageWithId
+  , writeMessageWithId_
   , writeMessage
+  , writeMessage_
   , getStreamMessages
   , getCategoryMessages
   , getLastStreamMessage
@@ -290,6 +292,27 @@ writeMessageWithId connection messageId streamName messageType payload metadata 
   pure (fromInteger position)
 
 
+writeMessageWithId_
+  :: ( Aeson.ToJSON payload
+     )
+  => Postgres.Connection
+  -> Message.MessageId
+  -> StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe ExpectedVersion
+  -> IO Message.StreamPosition
+writeMessageWithId_ connection messageId streamName messageType payload expectedVersion = do
+  writeMessageWithId
+    connection
+    messageId
+    streamName
+    messageType
+    payload
+    (Nothing :: Maybe Message.Metadata)
+    expectedVersion
+
+
 -- | Write a JSON-formatted message to a named stream, optionally specifying JSON-formatted metadata and an expected version number.
 writeMessage
   :: ( Aeson.ToJSON payload
@@ -306,6 +329,26 @@ writeMessage connection streamName messageType payload metadata expectedVersion 
   messageId <- Message.newMessageId
   position <- writeMessageWithId connection messageId streamName messageType payload metadata expectedVersion
   pure (messageId, position)
+
+
+-- | Write a JSON-formatted message to a named stream, and optionally an expected version number.
+writeMessage_
+  :: ( Aeson.ToJSON payload
+     )
+  => Postgres.Connection
+  -> StreamName
+  -> Message.MessageType
+  -> payload
+  -> Maybe ExpectedVersion
+  -> IO (Message.MessageId, Message.StreamPosition)
+writeMessage_ connection streamName messageType payload expectedVersion = do
+  writeMessage
+    connection
+    streamName
+    messageType
+    payload
+    (Nothing :: Maybe Message.Metadata)
+    expectedVersion
 
 
 -- | Retrieve messages from a single stream, optionally specifying the starting position, the number of messages to retrieve, and an additional condition that will be appended to the SQL command's WHERE clause.
