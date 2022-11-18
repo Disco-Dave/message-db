@@ -17,8 +17,7 @@ newtype GlobalPosition = GlobalPosition
   -- ^ Convert a 'GlobalPosition' to a 'Natural'.
   }
   deriving
-    ( Show
-    , Eq
+    ( Eq
     , Ord
     , Num
     , Real
@@ -27,6 +26,7 @@ newtype GlobalPosition = GlobalPosition
     , Aeson.ToJSON
     , Aeson.FromJSON
     )
+  deriving (Show) via Natural
 
 
 -- | Convert a 'Natural' to a 'GlobalPosition'.
@@ -45,4 +45,3 @@ instance FromField GlobalPosition where
     if integer >= 0
       then pure . globalPositionFromNatural $ fromInteger integer
       else FromField.returnError FromField.Incompatible field "Global position is negative"
-

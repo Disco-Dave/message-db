@@ -21,13 +21,13 @@ newtype MessageId = MessageId
   -- ^ Convert a 'MessageId' to a 'UUID'.
   }
   deriving
-    ( Show
-    , Eq
+    ( Eq
     , Ord
     , Aeson.FromJSON
     , Aeson.ToJSON
     , ToField
     )
+  deriving (Show) via UUID
 
 
 -- | Create a new unique message id.
@@ -44,6 +44,7 @@ messageIdFromUUID =
 
 -- | The 'MessageId' is stored as a @uuid@ in the @message_store.messages@ table.
 -- However, the 'MessageId' is cast to a @text@ when using the @message-db@ stored functions.
+-- This instance tries both.
 instance FromField MessageId where
   fromField field metadata =
     let fromUuid =

@@ -1,5 +1,6 @@
 module MessageDb.Message.Metadata
   ( Metadata (..)
+  , nullMetadata
   , metadataFromValue
   , toMetadata
   , fromMetadata
@@ -10,6 +11,7 @@ import Control.Applicative (Alternative ((<|>)))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
 import Data.Bifunctor (Bifunctor (first))
+import qualified Data.ByteString.Lazy.Char8 as Char8
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -29,6 +31,11 @@ newtype Metadata = Metadata
     , Aeson.FromJSON
     , ToField
     )
+
+
+instance Show Metadata where
+  show (Metadata value) =
+    Char8.unpack $ Aeson.encode value
 
 
 -- | Convert a 'Aeson.Value' to a 'Metadata'.
@@ -57,6 +64,7 @@ fromMetadata (Metadata metadata) =
 
 -- | The 'Metadata' is stored as a @jsonb@ in the @message_store.messages@ table.
 -- However, the 'Metadata' is cast to a @varchar@ when using the @message-db@ stored functions.
+-- This instance tries both.
 instance FromField Metadata where
   fromField field metadata =
     let fromJsonb =
@@ -72,4 +80,3 @@ instance FromField Metadata where
             Left err ->
               FromField.returnError FromField.Incompatible field err
      in fromVarchar <|> fromJsonb
-

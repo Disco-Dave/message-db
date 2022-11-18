@@ -120,14 +120,29 @@ library
     , uuid >=1.3 && <1.4
 
   exposed-modules:
+    MessageDb
+    MessageDb.Consumer
+    MessageDb.Consumer.BatchSize
+    MessageDb.Consumer.Condition
+    MessageDb.Consumer.ConsumerGroup
+    MessageDb.Consumer.ConsumerGroupSize
+    MessageDb.Consumer.ConsumerIndex
+    MessageDb.Consumer.Correlation
+    MessageDb.Consumer.StreamVersion
+    MessageDb.Message
     MessageDb.Message.CreatedAt
     MessageDb.Message.GlobalPosition
     MessageDb.Message.MessageId
     MessageDb.Message.MessageType
     MessageDb.Message.Metadata
     MessageDb.Message.Payload
+    MessageDb.Message.StreamName
+    MessageDb.Message.StreamName.Category
+    MessageDb.Message.StreamName.Identifier
     MessageDb.Message.StreamPosition
-    MessageDb.Units
+    MessageDb.Producer
+    MessageDb.Units.Microseconds
+    MessageDb.Units.NumberOfMessages
 
 
 test-suite message-db-test

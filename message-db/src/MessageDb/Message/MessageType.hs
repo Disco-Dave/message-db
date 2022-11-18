@@ -19,13 +19,13 @@ newtype MessageType = MessageType
   deriving
     ( Eq
     , Ord
-    , Show
     , IsString
     , Aeson.ToJSON
     , Aeson.FromJSON
     , FromField
     , ToField
     )
+  deriving (Show) via Text
 
 
 -- | Convert a 'Text to a 'MessageType'.

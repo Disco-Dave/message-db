@@ -18,13 +18,13 @@ newtype CreatedAt = CreatedAt
   -- ^ Convert a 'GlobalPosition' to a 'Natural'.
   }
   deriving
-    ( Show
-    , Eq
+    ( Eq
     , Ord
     , Aeson.ToJSON
     , Aeson.FromJSON
     , ToField
     )
+  deriving (Show) via UTCTime
 
 
 -- | Convert a 'UTCTime' to a 'CreatedAt.

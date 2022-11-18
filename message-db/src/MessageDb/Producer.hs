@@ -1,0 +1,2 @@
+module MessageDb.Producer () where
+

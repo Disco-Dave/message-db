@@ -17,8 +17,7 @@ newtype StreamPosition = StreamPosition
   -- ^ Convert a 'StreamPosition' to a 'Natural'.
   }
   deriving
-    ( Show
-    , Eq
+    ( Eq
     , Ord
     , Num
     , Real
@@ -27,6 +26,7 @@ newtype StreamPosition = StreamPosition
     , Aeson.ToJSON
     , Aeson.FromJSON
     )
+  deriving (Show) via Natural
 
 
 -- | Convert a 'Natural' to a 'StreamPosition'.
