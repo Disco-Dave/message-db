@@ -120,15 +120,6 @@ library
     , uuid >=1.3 && <1.4
 
   exposed-modules:
-    MessageDb.Functions
-    MessageDb.Handlers
-    MessageDb.Message
-    MessageDb.Projection
-    MessageDb.StreamName
-    MessageDb.Subscription
-    MessageDb.Subscription.FailedMessage
-    MessageDb.Subscription.FailureStrategy
-    MessageDb.Subscription.PositionStrategy
     MessageDb.Units
 
 
@@ -160,16 +151,4 @@ test-suite message-db-test
     , vector >=0.12 && <0.14
 
   other-modules:
-    Examples.BankAccount
-    Generators
-    Generators.Message
-    Generators.StreamName
-    MessageDb.FunctionsSpec
-    MessageDb.ProjectionSpec
-    MessageDb.StreamNameSpec
-    MessageDb.Subscription.FailureStrategySpec
-    MessageDb.Subscription.PositionStrategySpec
-    MessageDb.SubscriptionSpec
-    Properties
     Spec
-    TestApp
