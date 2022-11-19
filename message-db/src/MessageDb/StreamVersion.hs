@@ -1,4 +1,4 @@
-module MessageDb.Consumer.StreamVersion
+module MessageDb.StreamVersion
   ( StreamVersion (..)
   )
 where
