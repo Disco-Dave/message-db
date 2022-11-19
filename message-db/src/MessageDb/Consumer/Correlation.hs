@@ -1,4 +1,4 @@
-module MessageDb.Correlation
+module MessageDb.Consumer.Correlation
   ( Correlation (..)
   , correlationFromText
   )

@@ -22,6 +22,7 @@ newtype Category = Category Text
     , Ord
     , IsString
     , Semigroup
+    , Monoid
     , Read
     , Aeson.ToJSON
     , ToField

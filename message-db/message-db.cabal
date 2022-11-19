@@ -127,7 +127,9 @@ library
     MessageDb.Consumer.ConsumerGroup
     MessageDb.Consumer.ConsumerGroupSize
     MessageDb.Consumer.ConsumerIndex
-    MessageDb.Correlation
+    MessageDb.Consumer.Correlation
+    MessageDb.Consumer.Projection
+    MessageDb.Consumer.Subscription
     MessageDb.Functions
     MessageDb.Message
     MessageDb.Message.CreatedAt
@@ -141,6 +143,7 @@ library
     MessageDb.Message.StreamName.Identifier
     MessageDb.Message.StreamPosition
     MessageDb.Producer
+    MessageDb.Producer.ProduceRecord
     MessageDb.Producer.UnexpectedStreamVersion
     MessageDb.StreamVersion
     MessageDb.Units.Microseconds

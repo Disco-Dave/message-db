@@ -20,6 +20,7 @@ newtype Identifier = Identifier
     , Ord
     , IsString
     , Semigroup
+    , Monoid
     , Read
     , Aeson.ToJSON
     , Aeson.FromJSON

@@ -28,6 +28,7 @@ newtype StreamName = StreamName
     , Ord
     , IsString
     , Semigroup
+    , Monoid
     , Read
     , Aeson.ToJSON
     , Aeson.FromJSON

@@ -19,6 +19,8 @@ newtype MessageType = MessageType
   deriving
     ( Eq
     , Ord
+    , Semigroup
+    , Monoid
     , IsString
     , Aeson.ToJSON
     , Aeson.FromJSON

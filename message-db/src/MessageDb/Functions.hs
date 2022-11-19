@@ -22,12 +22,14 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Consumer.BatchSize (BatchSize)
 import MessageDb.Consumer.Condition (Condition)
 import MessageDb.Consumer.ConsumerGroup (ConsumerGroup, consumerGroupSize, consumerIndex)
-import MessageDb.Correlation (Correlation)
+import MessageDb.Consumer.Correlation (Correlation)
 import MessageDb.Message (Message (Message), UntypedMessage)
 import qualified MessageDb.Message as Message
 import MessageDb.Message.GlobalPosition (GlobalPosition)
 import MessageDb.Message.MessageId (MessageId)
 import MessageDb.Message.MessageType (MessageType)
+import MessageDb.Message.Metadata (toMetadata)
+import MessageDb.Message.Payload (toPayload)
 import MessageDb.Message.StreamName (StreamName)
 import MessageDb.Message.StreamName.Category (Category)
 import MessageDb.Message.StreamPosition (StreamPosition)
@@ -132,8 +134,8 @@ writeMessage connection messageId streamName messageType payload metadata expect
         ( messageId
         , streamName
         , messageType
-        , Aeson.toJSON payload
-        , fmap Aeson.toJSON metadata
+        , toPayload payload
+        , fmap toMetadata metadata
         , expectedVersion
         )
 
