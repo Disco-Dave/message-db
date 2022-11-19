@@ -6,6 +6,7 @@ module MessageDb.Message.MessageId
 where
 
 import Control.Applicative (Alternative ((<|>)))
+import Control.Monad.IO.Class (MonadIO (liftIO))
 import qualified Data.Aeson as Aeson
 import Data.UUID (UUID)
 import qualified Data.UUID as UUID
@@ -31,9 +32,9 @@ newtype MessageId = MessageId
 
 
 -- | Create a new unique message id.
-newMessageId :: IO MessageId
+newMessageId :: MonadIO m => m MessageId
 newMessageId =
-  fmap MessageId UUID.V4.nextRandom
+  liftIO $ fmap MessageId UUID.V4.nextRandom
 
 
 -- | Convert a 'UUID to a 'MessageId.
