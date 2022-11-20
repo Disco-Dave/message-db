@@ -128,8 +128,12 @@ library
     MessageDb.Consumer.ConsumerGroupSize
     MessageDb.Consumer.ConsumerIndex
     MessageDb.Consumer.Correlation
+    MessageDb.Consumer.HandlerError
+    MessageDb.Consumer.HandlerKey
     MessageDb.Consumer.Projection
+    MessageDb.Consumer.ProjectionHandlers
     MessageDb.Consumer.Subscription
+    MessageDb.Consumer.SubscriptionHandlers
     MessageDb.Functions
     MessageDb.Message
     MessageDb.Message.CreatedAt
