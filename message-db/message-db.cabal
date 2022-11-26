@@ -113,6 +113,7 @@ library
     , containers >=0.6 && <0.7
     , mtl >= 2.2 && <2.4
     , postgresql-simple >=0.6 && <0.7
+    , resource-pool
     , safe-exceptions >=0.1 && <0.2
     , text >=1.2 && <2.1
     , time >=1.9 && <1.13
@@ -128,6 +129,7 @@ library
     MessageDb.Consumer.ConsumerGroupSize
     MessageDb.Consumer.ConsumerIndex
     MessageDb.Consumer.Correlation
+    MessageDb.Consumer.Fetch
     MessageDb.Consumer.HandlerError
     MessageDb.Consumer.HandlerKey
     MessageDb.Consumer.Projection

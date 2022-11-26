@@ -4,7 +4,7 @@ module MessageDb.Consumer.ProjectionError
 where
 
 import Control.Exception (Exception)
-import Data.Aeson ((.=))
+import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as Aeson
 import MessageDb.Consumer.HandlerError (HandlerError)
 import MessageDb.Message (UntypedMessage)
@@ -30,3 +30,10 @@ toKeyValues ProjectionError{..} =
 instance Aeson.ToJSON ProjectionError where
   toJSON = Aeson.object . toKeyValues
   toEncoding = Aeson.pairs . mconcat . toKeyValues
+
+
+instance Aeson.FromJSON ProjectionError where
+  parseJSON = Aeson.withObject "ProjectionError" $ \object -> do
+    projectionErrorReason <- object .: "reason"
+    projectionErrorMessage <- object .: "message"
+    pure ProjectionError{..}
