@@ -131,8 +131,11 @@ library
     MessageDb.Consumer.HandlerError
     MessageDb.Consumer.HandlerKey
     MessageDb.Consumer.Projection
+    MessageDb.Consumer.ProjectionError
     MessageDb.Consumer.ProjectionHandlers
     MessageDb.Consumer.Subscription
+    MessageDb.Consumer.SubscriptionError
+    MessageDb.Consumer.SubscriptionErrorReason
     MessageDb.Consumer.SubscriptionHandlers
     MessageDb.Functions
     MessageDb.Message
