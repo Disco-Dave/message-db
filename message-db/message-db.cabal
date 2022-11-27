@@ -43,6 +43,7 @@ common shared
 
   default-extensions:
     AllowAmbiguousTypes
+    BangPatterns
     DeriveFunctor
     DeriveGeneric
     DerivingVia
@@ -113,7 +114,7 @@ library
     , containers >=0.6 && <0.7
     , mtl >= 2.2 && <2.4
     , postgresql-simple >=0.6 && <0.7
-    , resource-pool
+    , resource-pool >=0.2 && <0.4
     , safe-exceptions >=0.1 && <0.2
     , text >=1.2 && <2.1
     , time >=1.9 && <1.13
@@ -178,7 +179,7 @@ test-suite message-db-test
     , message-db-temp
     , mtl
     , postgresql-simple
-    , resource-pool >=0.2 && <0.4
+    , resource-pool
     , text
     , time
     , unliftio >=0.2 && <0.3
