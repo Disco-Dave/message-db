@@ -130,6 +130,7 @@ library
     MessageDb.Consumer.ConsumerGroupSize
     MessageDb.Consumer.ConsumerIndex
     MessageDb.Consumer.Correlation
+    MessageDb.Consumer.DeadLetterQueue
     MessageDb.Consumer.Fetch
     MessageDb.Consumer.HandlerError
     MessageDb.Consumer.HandlerKey
@@ -140,6 +141,9 @@ library
     MessageDb.Consumer.SubscriptionError
     MessageDb.Consumer.SubscriptionErrorReason
     MessageDb.Consumer.SubscriptionHandlers
+    MessageDb.Consumer.SubscriptionPosition
+    MessageDb.Consumer.SubscriptionPosition.Message
+    MessageDb.Consumer.SubscriptionPosition.Table
     MessageDb.Functions
     MessageDb.Message
     MessageDb.Message.CreatedAt
