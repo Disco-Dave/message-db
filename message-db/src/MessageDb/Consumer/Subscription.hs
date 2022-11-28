@@ -1,6 +1,5 @@
 module MessageDb.Consumer.Subscription
-  ( SubscriptionPosition (..)
-  , Subscription (..)
+  ( Subscription (..)
   , subscribe
   , startSubscription
   )
@@ -24,18 +23,13 @@ import MessageDb.Consumer.Subscription.Correlation (Correlation)
 import MessageDb.Consumer.Subscription.Error (SubscriptionError (..))
 import MessageDb.Consumer.Subscription.ErrorReason (SubscriptionErrorReason (..))
 import MessageDb.Consumer.Subscription.Handlers (SubscriptionHandlers, handleSubscription)
+import MessageDb.Consumer.Subscription.SavedPosition (SavedPosition (..), noSavedPosition)
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message (Message (..), UntypedMessage)
 import MessageDb.Message.GlobalPosition (GlobalPosition)
 import MessageDb.Message.StreamName.Category (Category)
 import MessageDb.Units.Microseconds (Microseconds (microsecondsToNatural))
 import MessageDb.Units.NumberOfMessages (NumberOfMessages (..))
-
-
-data SubscriptionPosition m = SubscriptionPosition
-  { restorePosition :: m (Maybe GlobalPosition)
-  , savePosition :: GlobalPosition -> m ()
-  }
 
 
 -- | Defines how to subscribe to a category.
@@ -47,7 +41,7 @@ data Subscription m = Subscription
   , subConsumerGroup :: Maybe ConsumerGroup
   , subCondition :: Maybe Condition
   , subCorrelation :: Maybe Correlation
-  , subPosition :: SubscriptionPosition m
+  , subPosition :: SavedPosition m
   , subOnError :: SubscriptionError -> m ()
   , subHandlers :: SubscriptionHandlers m
   }
@@ -65,11 +59,7 @@ subscribe connectionPool category handlers =
     , subCondition = Nothing
     , subCorrelation = Nothing
     , subOnError = \_ -> pure ()
-    , subPosition =
-        SubscriptionPosition
-          { restorePosition = pure Nothing
-          , savePosition = \_ -> pure ()
-          }
+    , subPosition = noSavedPosition
     }
 
 
