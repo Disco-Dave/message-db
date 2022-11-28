@@ -81,13 +81,16 @@ fetch Fetch{..} = do
                             projectedErrors newProjected <> projectedErrors currentProjected
                         }
 
-            for_ fetchSnapshot $ \Snapshot{recordSnapshot} ->
-              recordSnapshot nextProjected
-
             case fetchBatchSize of
               Just BatchSize.Unlimited ->
                 pure $ Just nextProjected
               _ ->
                 loop nextProjected
 
-  loop initialProjected
+  finalProjected <- loop initialProjected
+
+  for_ fetchSnapshot $ \Snapshot{recordSnapshot} ->
+    for_ finalProjected $ \projectedState ->
+      recordSnapshot projectedState
+
+  pure finalProjected
