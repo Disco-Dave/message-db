@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export BANK_MESSAGE_DB_PORT="2000"
+export BANK_MESSAGE_DB_NAME="bank_message_db"
+export BANK_MESSAGE_DB_URL="postgresql://postgres@localhost:$BANK_MESSAGE_DB_PORT/$BANK_MESSAGE_DB_NAME?password=password"
+
+export BANK_READ_DB_PORT="2001"
+export BANK_READ_DB_NAME="bank_read_db"
+export BANK_READ_DB_URL="postgresql://postgres@localhost:$BANK_READ_DB_PORT/$BANK_READ_DB_NAME?password=password"

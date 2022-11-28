@@ -1,0 +1,13 @@
+**/.envrc
+
+**/dist-newstyle
+**/.stack-work
+**/cabal.project.local
+**/cabal.project.local~*
+**/*.tix
+
+**/elm-stuff
+**/node_modules
+**/.parcel-cache
+**/dist
+**/.coverage

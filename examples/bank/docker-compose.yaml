@@ -1,0 +1,35 @@
+version: "3"
+
+volumes:
+  message_db_data:
+  read_db_data:
+
+services:
+  message-db:
+    image: postgres:13-bullseye
+    ports:
+      - target: 5432
+        published: ${BANK_MESSAGE_DB_PORT:-2000}
+    volumes:
+      - type: volume
+        source: message_db_data
+        target: /var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${BANK_MESSAGE_DB_NAME:-bank_message_db}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+
+  read-db:
+    image: postgres:13-bullseye
+    ports:
+      - target: 5432
+        published: ${BANK_READ_DB_PORT:-2001}
+    volumes:
+      - type: volume
+        source: read_db_data
+        target: /var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${BANK_READ_DB_NAME:-bank_read_db}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+
