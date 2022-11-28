@@ -8,7 +8,7 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Data.Pool (Pool)
 import qualified Data.Pool as Pool
 import qualified Database.PostgreSQL.Simple as Postgres
-import MessageDb.Consumer.SubscriptionError (SubscriptionError)
+import MessageDb.Consumer.Subscription.Error (SubscriptionError)
 import MessageDb.Message.StreamName (StreamName)
 import MessageDb.Producer (produce)
 import MessageDb.Producer.ProduceRecord (ProduceRecord (..), emptyProduceRecord)

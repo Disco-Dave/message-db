@@ -1,4 +1,4 @@
-module MessageDb.Consumer.ConsumerIndex
+module MessageDb.Consumer.Subscription.ConsumerIndex
   ( ConsumerIndex (..)
   , consumerIndexFromNatural
   )

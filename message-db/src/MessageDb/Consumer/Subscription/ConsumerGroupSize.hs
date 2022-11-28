@@ -1,4 +1,4 @@
-module MessageDb.Consumer.ConsumerGroupSize
+module MessageDb.Consumer.Subscription.ConsumerGroupSize
   ( ConsumerGroupSize (..)
   , consumerGroupSizeFromNatural
   )

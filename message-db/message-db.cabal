@@ -126,24 +126,25 @@ library
     MessageDb.Consumer
     MessageDb.Consumer.BatchSize
     MessageDb.Consumer.Condition
-    MessageDb.Consumer.ConsumerGroup
-    MessageDb.Consumer.ConsumerGroupSize
-    MessageDb.Consumer.ConsumerIndex
-    MessageDb.Consumer.Correlation
     MessageDb.Consumer.DeadLetterQueue
     MessageDb.Consumer.Fetch
     MessageDb.Consumer.HandlerError
     MessageDb.Consumer.HandlerKey
     MessageDb.Consumer.Projection
-    MessageDb.Consumer.ProjectionError
-    MessageDb.Consumer.ProjectionHandlers
+    MessageDb.Consumer.Projection.Error
+    MessageDb.Consumer.Projection.Handlers
+    MessageDb.Consumer.Snapshot
+    MessageDb.Consumer.Snapshot.Message
     MessageDb.Consumer.Subscription
-    MessageDb.Consumer.SubscriptionError
-    MessageDb.Consumer.SubscriptionErrorReason
-    MessageDb.Consumer.SubscriptionHandlers
-    MessageDb.Consumer.SubscriptionPosition
-    MessageDb.Consumer.SubscriptionPosition.Message
-    MessageDb.Consumer.SubscriptionPosition.Table
+    MessageDb.Consumer.Subscription.ConsumerGroup
+    MessageDb.Consumer.Subscription.ConsumerGroupSize
+    MessageDb.Consumer.Subscription.ConsumerIndex
+    MessageDb.Consumer.Subscription.Correlation
+    MessageDb.Consumer.Subscription.Error
+    MessageDb.Consumer.Subscription.ErrorReason
+    MessageDb.Consumer.Subscription.Handlers
+    MessageDb.Consumer.Subscription.SavedPosition
+    MessageDb.Consumer.Subscription.SavedPosition.Message
     MessageDb.Functions
     MessageDb.Message
     MessageDb.Message.CreatedAt

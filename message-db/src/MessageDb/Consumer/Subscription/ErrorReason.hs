@@ -1,4 +1,4 @@
-module MessageDb.Consumer.SubscriptionErrorReason
+module MessageDb.Consumer.Subscription.ErrorReason
   ( SubscriptionErrorReason (..)
   )
 where

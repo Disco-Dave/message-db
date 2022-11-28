@@ -19,11 +19,11 @@ import Data.Void (Void)
 import qualified Database.PostgreSQL.Simple as Postgres
 import qualified MessageDb.Consumer.BatchSize as BatchSize
 import MessageDb.Consumer.Condition (Condition)
-import MessageDb.Consumer.ConsumerGroup (ConsumerGroup)
-import MessageDb.Consumer.Correlation (Correlation)
-import MessageDb.Consumer.SubscriptionError (SubscriptionError (..))
-import MessageDb.Consumer.SubscriptionErrorReason (SubscriptionErrorReason (..))
-import MessageDb.Consumer.SubscriptionHandlers (SubscriptionHandlers, handleSubscription)
+import MessageDb.Consumer.Subscription.ConsumerGroup (ConsumerGroup)
+import MessageDb.Consumer.Subscription.Correlation (Correlation)
+import MessageDb.Consumer.Subscription.Error (SubscriptionError (..))
+import MessageDb.Consumer.Subscription.ErrorReason (SubscriptionErrorReason (..))
+import MessageDb.Consumer.Subscription.Handlers (SubscriptionHandlers, handleSubscription)
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message (Message (..), UntypedMessage)
 import MessageDb.Message.GlobalPosition (GlobalPosition)

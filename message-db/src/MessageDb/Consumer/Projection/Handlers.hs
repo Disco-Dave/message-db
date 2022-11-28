@@ -1,4 +1,4 @@
-module MessageDb.Consumer.ProjectionHandlers
+module MessageDb.Consumer.Projection.Handlers
   ( ProjectionHandler
   , ProjectionHandlers
   , emptyProjectionHandlers

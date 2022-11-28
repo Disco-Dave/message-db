@@ -1,4 +1,4 @@
-module MessageDb.Consumer.SubscriptionError
+module MessageDb.Consumer.Subscription.Error
   ( SubscriptionError (..)
   )
 where
@@ -6,7 +6,7 @@ where
 import Control.Exception (Exception)
 import Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
-import MessageDb.Consumer.SubscriptionErrorReason (SubscriptionErrorReason)
+import MessageDb.Consumer.Subscription.ErrorReason (SubscriptionErrorReason)
 import MessageDb.Message (UntypedMessage)
 
 

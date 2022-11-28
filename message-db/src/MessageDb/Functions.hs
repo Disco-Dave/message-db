@@ -21,8 +21,8 @@ import qualified Database.PostgreSQL.Simple.FromRow as FromRow
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import MessageDb.Consumer.BatchSize (BatchSize)
 import MessageDb.Consumer.Condition (Condition)
-import MessageDb.Consumer.ConsumerGroup (ConsumerGroup, consumerGroupSize, consumerIndex)
-import MessageDb.Consumer.Correlation (Correlation)
+import MessageDb.Consumer.Subscription.ConsumerGroup (ConsumerGroup, consumerGroupSize, consumerIndex)
+import MessageDb.Consumer.Subscription.Correlation (Correlation)
 import MessageDb.Message (Message (Message), UntypedMessage)
 import qualified MessageDb.Message as Message
 import MessageDb.Message.GlobalPosition (GlobalPosition)

@@ -10,8 +10,8 @@ import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable (Foldable (foldl', toList))
 import Data.List.NonEmpty (NonEmpty (..))
-import MessageDb.Consumer.ProjectionError (ProjectionError (..))
-import MessageDb.Consumer.ProjectionHandlers (ProjectionHandlers, handleProjection)
+import MessageDb.Consumer.Projection.Error (ProjectionError (..))
+import MessageDb.Consumer.Projection.Handlers (ProjectionHandlers, handleProjection)
 import MessageDb.Message (UntypedMessage)
 import qualified MessageDb.Message as Message
 import MessageDb.StreamVersion (StreamVersion)

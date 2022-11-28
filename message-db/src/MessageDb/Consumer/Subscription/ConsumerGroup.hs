@@ -1,4 +1,4 @@
-module MessageDb.Consumer.ConsumerGroup
+module MessageDb.Consumer.Subscription.ConsumerGroup
   ( ConsumerGroup (..)
   , singleConsumer
   , isSingleConsumer
@@ -7,8 +7,8 @@ where
 
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as Aeson
-import MessageDb.Consumer.ConsumerGroupSize (ConsumerGroupSize (..))
-import MessageDb.Consumer.ConsumerIndex (ConsumerIndex (..))
+import MessageDb.Consumer.Subscription.ConsumerGroupSize (ConsumerGroupSize (..))
+import MessageDb.Consumer.Subscription.ConsumerIndex (ConsumerIndex (..))
 
 
 data ConsumerGroup = ConsumerGroup

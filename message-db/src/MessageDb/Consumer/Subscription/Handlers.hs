@@ -1,4 +1,4 @@
-module MessageDb.Consumer.SubscriptionHandlers
+module MessageDb.Consumer.Subscription.Handlers
   ( SubscriptionHandler
   , SubscriptionHandlers
   , emptySubscriptionHandlers

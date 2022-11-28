@@ -1,4 +1,4 @@
-module MessageDb.Consumer.ProjectionError
+module MessageDb.Consumer.Projection.Error
   ( ProjectionError (..)
   )
 where
