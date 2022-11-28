@@ -122,7 +122,6 @@ library
 
   exposed-modules:
     MessageDb
-    MessageDb.Consumer
     MessageDb.Consumer.BatchSize
     MessageDb.Consumer.Condition
     MessageDb.Consumer.DeadLetterQueue

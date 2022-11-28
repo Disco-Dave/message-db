@@ -67,6 +67,7 @@ emptyProjection projectionState =
     { projectedErrors = []
     , projectedStreamVersion = StreamVersion.DoesNotExist
     , projectedState = projectionState
+
     }
 
 
