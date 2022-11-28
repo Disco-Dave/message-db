@@ -1,6 +1,5 @@
 module MessageDb.Consumer.Fetch
-  ( Snapshot (..)
-  , FetchOptions (..)
+  ( Fetch (..)
   , fetch
   )
 where
@@ -23,18 +22,13 @@ import MessageDb.Consumer.Projection
   , emptyProjection
   , project
   )
+import MessageDb.Consumer.Snapshot (Snapshot (..))
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message.StreamName (StreamName)
 import qualified MessageDb.StreamVersion as StreamVersion
 
 
-data Snapshot m state = Snapshot
-  { retrieveSnapshot :: m (Maybe (Projected state))
-  , recordSnapshot :: Projected state -> m ()
-  }
-
-
-data FetchOptions m state = FetchOptions
+data Fetch m state = Fetch
   { fetchConnectionPool :: Pool Postgres.Connection
   , fetchBatchSize :: Maybe BatchSize
   , fetchStreamName :: StreamName
@@ -44,8 +38,8 @@ data FetchOptions m state = FetchOptions
   }
 
 
-fetch :: MonadIO m => FetchOptions m state -> m (Maybe (Projected state))
-fetch FetchOptions{..} = do
+fetch :: MonadIO m => Fetch m state -> m (Maybe (Projected state))
+fetch Fetch{..} = do
   snapshot <- join <$> traverse retrieveSnapshot fetchSnapshot
 
   let initialProjected =
