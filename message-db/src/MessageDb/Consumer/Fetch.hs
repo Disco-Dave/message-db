@@ -1,10 +1,10 @@
 module MessageDb.Consumer.Fetch
-  ( Fetch (..)
+  ( FetchParams (..)
+  , fetchParams
   , fetch
   )
 where
 
-import Control.Monad (join)
 import Control.Monad.Except (MonadIO)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Foldable (for_)
@@ -22,25 +22,37 @@ import MessageDb.Consumer.Projection
   , emptyProjection
   , project
   )
-import MessageDb.Consumer.Snapshot (Snapshot (..))
+import MessageDb.Consumer.Snapshots (Snapshots (..), noSnapshots)
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message.StreamName (StreamName)
 import qualified MessageDb.StreamVersion as StreamVersion
 
 
-data Fetch m state = Fetch
+data FetchParams m state = FetchParams
   { fetchConnectionPool :: Pool Postgres.Connection
-  , fetchBatchSize :: Maybe BatchSize
+  , fetchBatchSize :: BatchSize
   , fetchStreamName :: StreamName
   , fetchProjection :: Projection state
-  , fetchSnapshot :: Maybe (Snapshot m state)
+  , fetchSnapshot :: Snapshots m state
   , fetchCondition :: Maybe Condition
   }
 
 
-fetch :: MonadIO m => Fetch m state -> m (Maybe (Projected state))
-fetch Fetch{..} = do
-  snapshot <- join <$> traverse retrieveSnapshot fetchSnapshot
+fetchParams :: Applicative m => Pool Postgres.Connection -> StreamName -> Projection state -> FetchParams m state
+fetchParams connectionPool streamName projection =
+  FetchParams
+    { fetchConnectionPool = connectionPool
+    , fetchBatchSize = BatchSize.FixedSize 100
+    , fetchStreamName = streamName
+    , fetchProjection = projection
+    , fetchSnapshot = noSnapshots
+    , fetchCondition = Nothing
+    }
+
+
+fetch :: MonadIO m => FetchParams m state -> m (Maybe (Projected state))
+fetch FetchParams{..} = do
+  snapshot <- retrieveSnapshot fetchSnapshot
 
   let initialProjected =
         fromMaybe (emptyProjection (projectionState fetchProjection)) snapshot
@@ -65,7 +77,7 @@ fetch Fetch{..} = do
               connection
               fetchStreamName
               queryPosition
-              fetchBatchSize
+              (Just fetchBatchSize)
               fetchCondition
 
         case (maybeMessages, currentStreamVersion) of
@@ -82,15 +94,14 @@ fetch Fetch{..} = do
                         }
 
             case fetchBatchSize of
-              Just BatchSize.Unlimited ->
+              BatchSize.Unlimited ->
                 pure $ Just nextProjected
               _ ->
                 loop nextProjected
 
   finalProjected <- loop initialProjected
 
-  for_ fetchSnapshot $ \Snapshot{recordSnapshot} ->
-    for_ finalProjected $ \projectedState ->
-      recordSnapshot projectedState
+  for_ finalProjected $
+    recordSnapshot fetchSnapshot
 
   pure finalProjected

@@ -132,8 +132,7 @@ library
     MessageDb.Consumer.Projection
     MessageDb.Consumer.Projection.Error
     MessageDb.Consumer.Projection.Handlers
-    MessageDb.Consumer.Snapshot
-    MessageDb.Consumer.Snapshot.Message
+    MessageDb.Consumer.Snapshots
     MessageDb.Consumer.Subscription
     MessageDb.Consumer.Subscription.ConsumerGroup
     MessageDb.Consumer.Subscription.ConsumerGroupSize
@@ -142,8 +141,6 @@ library
     MessageDb.Consumer.Subscription.Error
     MessageDb.Consumer.Subscription.ErrorReason
     MessageDb.Consumer.Subscription.Handlers
-    MessageDb.Consumer.Subscription.SavedPosition
-    MessageDb.Consumer.Subscription.SavedPosition.Message
     MessageDb.Functions
     MessageDb.Message
     MessageDb.Message.CreatedAt

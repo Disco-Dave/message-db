@@ -11,7 +11,6 @@ import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Data.Foldable (traverse_)
 import qualified Data.List.NonEmpty as NonEmpty
-import Data.Maybe (fromMaybe)
 import Data.Pool (Pool)
 import qualified Data.Pool as Pool
 import Data.Void (Void)
@@ -23,7 +22,6 @@ import MessageDb.Consumer.Subscription.Correlation (Correlation)
 import MessageDb.Consumer.Subscription.Error (SubscriptionError (..))
 import MessageDb.Consumer.Subscription.ErrorReason (SubscriptionErrorReason (..))
 import MessageDb.Consumer.Subscription.Handlers (SubscriptionHandlers, handleSubscription)
-import MessageDb.Consumer.Subscription.SavedPosition (SavedPosition (..), noSavedPosition)
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message (Message (..), UntypedMessage)
 import MessageDb.Message.GlobalPosition (GlobalPosition)
@@ -41,9 +39,9 @@ data Subscription m = Subscription
   , subConsumerGroup :: Maybe ConsumerGroup
   , subCondition :: Maybe Condition
   , subCorrelation :: Maybe Correlation
-  , subPosition :: SavedPosition m
   , subOnError :: SubscriptionError -> m ()
   , subHandlers :: SubscriptionHandlers m
+  , subStartingPosition :: GlobalPosition
   }
 
 
@@ -57,9 +55,9 @@ subscribe connectionPool category handlers =
     , subTickInterval = 500_000
     , subConsumerGroup = Nothing
     , subCondition = Nothing
-    , subCorrelation = Nothing
     , subOnError = \_ -> pure ()
-    , subPosition = noSavedPosition
+    , subStartingPosition = 0
+    , subCorrelation = Nothing
     }
 
 
@@ -90,11 +88,12 @@ startSubscription Subscription{..} = do
                   { subscriptionErrorReason = reason
                   , subscriptionErrorMessage = message
                   }
-         in case handleSubscription subHandlers message of
-              Left handlerError ->
-                onError $ SubscriptionHandlerError handlerError
-              Right dangerousAction -> do
-                handleAny (onError . SubscriptionException) dangerousAction
+
+        case handleSubscription subHandlers message of
+          Left handlerError ->
+            onError $ SubscriptionHandlerError handlerError
+          Right dangerousAction -> do
+            handleAny (onError . SubscriptionException) dangerousAction
 
       processMessages :: [UntypedMessage] -> m (NumberOfMessages, Maybe GlobalPosition)
       processMessages messages =
@@ -112,15 +111,9 @@ startSubscription Subscription{..} = do
         (messagesProcessed, lastMessagePosition) <-
           processMessages =<< queryCategory initialPosition
 
-        when (messagesProcessed > 0) $ do
-          let currentPosition = fromMaybe initialPosition lastMessagePosition
-           in savePosition subPosition currentPosition
-
-          when (messagesProcessed < subBatchSize) sleep
+        when (messagesProcessed < subBatchSize) sleep
 
         let nextPosition = maybe initialPosition (+ 1) lastMessagePosition
          in poll nextPosition
 
-  lastPositionSaved <- restorePosition subPosition
-
-  poll (fromMaybe 0 lastPositionSaved)
+  poll subStartingPosition
