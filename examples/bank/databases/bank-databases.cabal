@@ -1,0 +1,108 @@
+cabal-version: 3.4
+
+
+name: bank-databases
+version: 0.1.0.0
+synopsis: Management for the databases used with this bank example.
+
+
+flag pedantic
+  default: False
+  description: Enables @-Werror@, which turns warnings into errors.
+  manual: True
+
+
+common shared
+  default-language: GHC2021
+
+  default-extensions:
+    AllowAmbiguousTypes
+    DataKinds
+    DerivingVia
+    DuplicateRecordFields
+    LambdaCase
+    NoFieldSelectors
+    OverloadedRecordDot
+    OverloadedStrings
+    QuasiQuotes
+    RecordWildCards
+    StrictData
+
+  ghc-options:
+    -Weverything 
+    -Wno-all-missed-specialisations 
+    -Wno-identities
+    -Wno-implicit-prelude 
+    -Wno-missed-specialisations 
+    -Wno-missing-deriving-strategies
+    -Wno-missing-exported-signatures 
+    -Wno-missing-import-lists 
+    -Wno-missing-local-signatures 
+    -Wno-monomorphism-restriction 
+    -Wno-safe 
+    -Wno-unsafe 
+    -Wno-missing-safe-haskell-mode
+    -Wno-prepositive-qualified-module
+    -Wno-missing-kind-signatures
+    -Werror=incomplete-patterns
+
+  if flag(pedantic)
+    ghc-options:
+      -Werror
+
+  build-depends:
+    , base >=4.7 && <5
+
+  autogen-modules:
+    Paths_bank_databases
+    
+  other-modules:
+    Paths_bank_databases
+
+
+common shared-exe
+  import:
+    , shared
+
+  build-depends:
+    , bank-databases
+
+  ghc-options:
+    -threaded 
+    -rtsopts 
+    -with-rtsopts=-N
+
+
+library
+  import: shared
+
+  hs-source-dirs: src
+
+  build-depends:
+
+  exposed-modules:
+    Bank.Databases
+
+
+executable bank-databases
+  import: shared-exe
+
+  hs-source-dirs: app
+  main-is: Main.hs
+
+
+test-suite bank-databases-test
+  import: shared-exe
+
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+
+  build-tool-depends:
+    , hspec-discover:hspec-discover
+
+  build-depends:
+    , hspec >= 2.10.0.1 && < 2.11
+
+  other-modules:
+    Spec
