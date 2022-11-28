@@ -33,7 +33,7 @@ import MessageDb.Message.Payload (toPayload)
 import MessageDb.Message.StreamName (StreamName)
 import MessageDb.Message.StreamName.Category (Category)
 import MessageDb.Message.StreamPosition (StreamPosition)
-import MessageDb.Producer.UnexpectedStreamVersion (parseUnexpectedStreamVersion)
+import MessageDb.Produce.UnexpectedStreamVersion (parseUnexpectedStreamVersion)
 import MessageDb.StreamVersion (StreamVersion)
 
 

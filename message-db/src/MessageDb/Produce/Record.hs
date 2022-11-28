@@ -1,12 +1,11 @@
-module MessageDb.Producer.ProduceRecord
+module MessageDb.Produce.Record
   ( ProduceRecord (..)
-  , emptyProduceRecord
+  , produceRecord
   )
 where
 
 import MessageDb.Message.MessageType (MessageType)
 import MessageDb.Message.Metadata (Metadata)
-import MessageDb.Message.Payload (Payload, nullPayload)
 import MessageDb.Message.StreamName (StreamName)
 import MessageDb.StreamVersion (StreamVersion)
 
@@ -21,15 +20,12 @@ data ProduceRecord payload metadata = ProduceRecord
   deriving (Show, Eq)
 
 
-type UntypedProduceRecord = ProduceRecord Payload Metadata
-
-
-emptyProduceRecord :: UntypedProduceRecord
-emptyProduceRecord =
+produceRecord :: StreamName -> MessageType -> payload -> ProduceRecord payload Metadata
+produceRecord streamName messageType payload =
   ProduceRecord
-    { produceStreamName = mempty
-    , produceMessageType = mempty
-    , producePayload = nullPayload
+    { produceStreamName = streamName
+    , produceMessageType = messageType
+    , producePayload = payload
     , produceMetadata = Nothing
     , produceExpectedVersion = Nothing
     }

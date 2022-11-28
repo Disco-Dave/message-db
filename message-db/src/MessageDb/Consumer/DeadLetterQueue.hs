@@ -10,8 +10,8 @@ import qualified Data.Pool as Pool
 import qualified Database.PostgreSQL.Simple as Postgres
 import MessageDb.Consumer.Subscription.Error (SubscriptionError)
 import MessageDb.Message.StreamName (StreamName)
-import MessageDb.Producer (produce)
-import MessageDb.Producer.ProduceRecord (ProduceRecord (..), emptyProduceRecord)
+import MessageDb.Produce (produce)
+import MessageDb.Produce.Record (produceRecord)
 
 
 writeToDlq
@@ -24,11 +24,7 @@ writeToDlq
 writeToDlq connectionPool shouldWriteToDlq dlqStreamName subscriptionError =
   when (shouldWriteToDlq subscriptionError) $ do
     let record =
-          emptyProduceRecord
-            { produceStreamName = dlqStreamName
-            , produceMessageType = "SubscriptionError"
-            , producePayload = subscriptionError
-            }
+          produceRecord dlqStreamName "SubscriptionErrorRecorded" subscriptionError
 
     void . liftIO . Pool.withResource connectionPool $ \connection ->
       produce connection record

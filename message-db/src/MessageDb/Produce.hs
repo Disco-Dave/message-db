@@ -1,4 +1,4 @@
-module MessageDb.Producer
+module MessageDb.Produce
   ( produceWithId
   , produce
   )
@@ -10,7 +10,7 @@ import qualified Database.PostgreSQL.Simple as Postgres
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message.MessageId (MessageId (..), newMessageId)
 import MessageDb.Message.StreamPosition (StreamPosition (..))
-import MessageDb.Producer.ProduceRecord (ProduceRecord (..))
+import MessageDb.Produce.Record (ProduceRecord (..))
 
 
 produceWithId

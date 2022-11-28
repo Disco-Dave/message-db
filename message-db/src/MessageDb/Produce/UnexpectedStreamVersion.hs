@@ -1,4 +1,4 @@
-module MessageDb.Producer.UnexpectedStreamVersion
+module MessageDb.Produce.UnexpectedStreamVersion
   ( UnexpectedStreamVersion (..)
   , parseUnexpectedStreamVersion
   )

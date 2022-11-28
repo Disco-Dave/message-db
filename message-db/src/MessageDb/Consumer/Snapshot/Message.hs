@@ -15,8 +15,8 @@ import qualified MessageDb.Functions as Functions
 import MessageDb.Message (Message (messagePayload))
 import MessageDb.Message.Payload (fromPayload)
 import MessageDb.Message.StreamName (StreamName)
-import MessageDb.Producer (produce)
-import MessageDb.Producer.ProduceRecord (ProduceRecord (..), emptyProduceRecord)
+import MessageDb.Produce (produce)
+import MessageDb.Produce.Record (produceRecord)
 
 
 retrieveSnapshotMessage
@@ -54,11 +54,7 @@ recordSnapshotMessage connectionPool snapshotStreamName projectedState = do
 
   when (oldVersion /= Just newVersion) $ do
     let record =
-          emptyProduceRecord
-            { produceStreamName = snapshotStreamName
-            , produceMessageType = "ProjectedSnapshot"
-            , producePayload = projectedState
-            }
+          produceRecord snapshotStreamName "ProjectedStateSnapshotted" projectedState
 
     void . liftIO . Pool.withResource connectionPool $ \connection ->
       produce connection record
