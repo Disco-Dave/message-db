@@ -1,5 +1,5 @@
 module MessageDb.Consumer.Fetch
-  ( FetchSnapshot (..)
+  ( Snapshot (..)
   , FetchOptions (..)
   , fetch
   )
@@ -28,18 +28,18 @@ import MessageDb.Message.StreamName (StreamName)
 import qualified MessageDb.StreamVersion as StreamVersion
 
 
-data FetchSnapshot m state = FetchSnapshot
+data Snapshot m state = Snapshot
   { retrieveSnapshot :: m (Maybe (Projected state))
   , recordSnapshot :: Projected state -> m ()
   }
 
 
 data FetchOptions m state = FetchOptions
-  { fetchPool :: Pool Postgres.Connection
+  { fetchConnectionPool :: Pool Postgres.Connection
   , fetchBatchSize :: Maybe BatchSize
   , fetchStreamName :: StreamName
   , fetchProjection :: Projection state
-  , fetchSnapshot :: Maybe (FetchSnapshot m state)
+  , fetchSnapshot :: Maybe (Snapshot m state)
   , fetchCondition :: Maybe Condition
   }
 
@@ -49,7 +49,7 @@ fetch FetchOptions{..} = do
   snapshot <- join <$> traverse retrieveSnapshot fetchSnapshot
 
   let initialProjected =
-        fromMaybe (emptyProjection (initialState fetchProjection)) snapshot
+        fromMaybe (emptyProjection (projectionState fetchProjection)) snapshot
 
       loop !currentProjected = do
         let currentStreamVersion =
@@ -62,11 +62,11 @@ fetch FetchOptions{..} = do
 
             currentProjection =
               fetchProjection
-                { initialState = projectedState currentProjected
+                { projectionState = projectedState currentProjected
                 }
 
         maybeMessages <-
-          liftIO . fmap nonEmpty . Pool.withResource fetchPool $ \connection ->
+          liftIO . fmap nonEmpty . Pool.withResource fetchConnectionPool $ \connection ->
             Functions.getStreamMessages
               connection
               fetchStreamName
@@ -87,7 +87,7 @@ fetch FetchOptions{..} = do
                             projectedErrors newProjected <> projectedErrors currentProjected
                         }
 
-            for_ fetchSnapshot $ \FetchSnapshot{recordSnapshot} ->
+            for_ fetchSnapshot $ \Snapshot{recordSnapshot} ->
               recordSnapshot nextProjected
 
             case fetchBatchSize of

@@ -20,7 +20,7 @@ import qualified MessageDb.StreamVersion as StreamVersion
 
 -- | Defines how to perform a projection a stream.
 data Projection state = Projection
-  { initialState :: state
+  { projectionState :: state
   , projectionHandlers :: ProjectionHandlers state
   }
 
@@ -62,17 +62,17 @@ instance Aeson.FromJSON state => Aeson.FromJSON (Projected state) where
 
 -- | Constructs an empty projection.
 emptyProjection :: state -> Projected state
-emptyProjection initialState =
+emptyProjection projectionState =
   Projected
     { projectedErrors = []
     , projectedStreamVersion = StreamVersion.DoesNotExist
-    , projectedState = initialState
+    , projectedState = projectionState
     }
 
 
 -- | Project a state of a stream by aggregating messages.
 project :: Projection state -> NonEmpty UntypedMessage -> Projected state
-project Projection{initialState, projectionHandlers} messages =
+project Projection{projectionState, projectionHandlers} messages =
   let applyHandler projected@Projected{projectedState, projectedErrors} message =
         let updatedProjected =
               projected
@@ -89,4 +89,4 @@ project Projection{initialState, projectionHandlers} messages =
                   { projectedErrors =
                       ProjectionError reason message : projectedErrors
                   }
-   in foldl' applyHandler (emptyProjection initialState) (toList messages)
+   in foldl' applyHandler (emptyProjection projectionState) (toList messages)
