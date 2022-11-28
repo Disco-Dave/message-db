@@ -1,3 +1,6 @@
 [submodule "message-db-temp/official-message-db-upstream"]
 	path = message-db-temp/official-message-db-upstream
 	url = https://github.com/message-db/message-db.git
+[submodule "examples/bank/databases/src/Bank/Databases/MessageDb/Upstream"]
+	path = examples/bank/databases/src/Bank/Databases/MessageDb/Upstream
+	url = https://github.com/message-db/message-db.git

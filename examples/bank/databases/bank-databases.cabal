@@ -6,6 +6,13 @@ version: 0.1.0.0
 synopsis: Management for the databases used with this bank example.
 
 
+data-files: 
+  , src/Bank/Databases/MessageDb/Upstream/**/*.md
+  , src/Bank/Databases/MessageDb/Upstream/**/*.sh
+  , src/Bank/Databases/MessageDb/Upstream/**/*.sql
+  , src/Bank/Databases/MessageDb/Upstream/**/*.txt
+
+
 flag pedantic
   default: False
   description: Enables @-Werror@, which turns warnings into errors.
