@@ -1,16 +1,9 @@
 cabal-version: 3.4
 
 
-name: bank-databases
+name: bank-shared
 version: 0.1.0.0
-synopsis: Management for the databases used with this bank example.
-
-
-data-files: 
-  , src/Bank/Databases/MessageDb/Upstream/**/*.md
-  , src/Bank/Databases/MessageDb/Upstream/**/*.sh
-  , src/Bank/Databases/MessageDb/Upstream/**/*.sql
-  , src/Bank/Databases/MessageDb/Upstream/**/*.txt
+synopsis: Types shared between two or more programs
 
 
 flag pedantic
@@ -34,6 +27,8 @@ common shared
     QuasiQuotes
     RecordWildCards
     StrictData
+    TypeFamilies
+    TypeOperators
 
   ghc-options:
     -Weverything 
@@ -61,10 +56,10 @@ common shared
     , base >=4.7 && <5
 
   autogen-modules:
-    Paths_bank_databases
+    Paths_bank_shared
     
   other-modules:
-    Paths_bank_databases
+    Paths_bank_shared
 
 
 common shared-exe
@@ -72,7 +67,7 @@ common shared-exe
     , shared
 
   build-depends:
-    , bank-databases
+    , bank-shared
 
   ghc-options:
     -threaded 
@@ -86,24 +81,31 @@ library
   hs-source-dirs: src
 
   build-depends:
-    , optparse-applicative
-    , envparse
-    , katip
+    , annotated-exception >= 0.2.0.4 && < 0.3
+    , bytestring >= 0.11.3 && < 0.12
+    , clock >= 0.8.3 && < 0.9
+    , data-has >= 0.4.0.0 && < 0.5
+    , envparse >= 0.5.0 && < 0.6
+    , katip >= 0.8.7 && < 0.9
+    , mtl >= 2.2.2 && < 2.3
+    , postgresql-simple >= 0.6.4 && < 0.7
+    , resource-pool >= 0.3.1 && < 0.4
+    , text >= 1.2.5 && < 2.1
+    , unliftio >= 0.2.22 && < 0.3
+    , uuid >= 1.3.15 && < 1.4
 
   exposed-modules:
-    Bank.Databases
-    Bank.Databases.MessageDb
-    Bank.Databases.ReadDb
+    Bank.Shared.Database
+    Bank.Shared.Database.ConnectionUrl
+    Bank.Shared.Database.IdleConnectionTimeout
+    Bank.Shared.Database.MaxConnections
+    Bank.Shared.EnvParsers
+    Bank.Shared.Exception
+    Bank.Shared.Exception.Annotations
+    Bank.Shared.Logging
 
 
-executable bank-databases
-  import: shared-exe
-
-  hs-source-dirs: app
-  main-is: Main.hs
-
-
-test-suite bank-databases-test
+test-suite bank-shared-test
   import: shared-exe
 
   type: exitcode-stdio-1.0
@@ -114,7 +116,24 @@ test-suite bank-databases-test
     , hspec-discover:hspec-discover
 
   build-depends:
+    , annotated-exception
+    , bytestring
+    , envparse
     , hspec >= 2.10.0.1 && < 2.11
+    , mtl
+    , postgresql-simple
+    , QuickCheck >= 2.14.2 && < 2.15
+    , text
+    , tmp-postgres >= 1.34.1.0 && < 1.35
+    , unliftio
 
   other-modules:
+    Bank.Shared.Database.ConnectionUrlSpec
+    Bank.Shared.Database.IdleConnectionTimeoutSpec
+    Bank.Shared.Database.MaxConnectionsSpec
+    Bank.Shared.DatabaseSpec
+    Bank.Shared.EnvParsersSpec
+    Bank.Shared.Exception.AnnotationsSpec
     Spec
+    Spec.PostgresTemp
+    Spec.Utils

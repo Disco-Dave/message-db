@@ -1,0 +1,5 @@
+packages: 
+  *.cabal
+
+test-show-details: direct
+with-compiler: ghc-9.2.5
