@@ -4,7 +4,7 @@ module MessageDb.Produce.Record
   )
 where
 
-import MessageDb.Message.MessageType (MessageType)
+import MessageDb.Message.MessageType (HasMessageType (getMessageType), MessageType)
 import MessageDb.Message.Metadata (Metadata)
 import MessageDb.Message.StreamName (StreamName)
 import MessageDb.StreamVersion (StreamVersion)
@@ -20,11 +20,16 @@ data ProduceRecord payload metadata = ProduceRecord
   deriving (Show, Eq)
 
 
-produceRecord :: StreamName -> MessageType -> payload -> ProduceRecord payload Metadata
-produceRecord streamName messageType payload =
+produceRecord
+  :: forall payload
+   . HasMessageType payload
+  => StreamName
+  -> payload
+  -> ProduceRecord payload Metadata
+produceRecord streamName payload =
   ProduceRecord
     { produceStreamName = streamName
-    , produceMessageType = messageType
+    , produceMessageType = getMessageType @payload
     , producePayload = payload
     , produceMetadata = Nothing
     , produceExpectedVersion = Nothing

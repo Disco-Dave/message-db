@@ -11,7 +11,7 @@ import qualified Data.Aeson as Aeson
 import Data.Pool (Pool)
 import qualified Data.Pool as Pool
 import qualified Database.PostgreSQL.Simple as Postgres
-import MessageDb.Consumer.Projection (Projected (..))
+import MessageDb.Consumer.Projection.Projected (Projected (..))
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message (Message (..))
 import MessageDb.Message.Payload (fromPayload)
@@ -63,7 +63,7 @@ messageSnapshots connectionPool snapshotStreamName = do
             newVersion = projectedStreamVersion projectedState
 
         when (oldVersion /= Just newVersion) $ do
-          let record = produceRecord snapshotStreamName "ProjectedStateSnapshotted" projectedState
+          let record = produceRecord snapshotStreamName  projectedState
            in void . liftIO . Pool.withResource connectionPool $ \connection ->
                 produce connection record
    in Snapshots

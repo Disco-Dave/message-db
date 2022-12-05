@@ -16,12 +16,8 @@ import qualified Database.PostgreSQL.Simple as Postgres
 import MessageDb.Consumer.BatchSize (BatchSize)
 import qualified MessageDb.Consumer.BatchSize as BatchSize
 import MessageDb.Consumer.Condition (Condition)
-import MessageDb.Consumer.Projection
-  ( Projected (..)
-  , Projection (..)
-  , emptyProjection
-  , project
-  )
+import MessageDb.Consumer.Projection (Projection (..), project)
+import MessageDb.Consumer.Projection.Projected (Projected (..), initProjected)
 import MessageDb.Consumer.Snapshots (Snapshots (..), noSnapshots)
 import qualified MessageDb.Functions as Functions
 import MessageDb.Message.StreamName (StreamName)
@@ -55,7 +51,7 @@ fetch FetchParams{..} = do
   snapshot <- retrieveSnapshot fetchSnapshot
 
   let initialProjected =
-        fromMaybe (emptyProjection (projectionState fetchProjection)) snapshot
+        fromMaybe (initProjected (projectionState fetchProjection)) snapshot
 
       loop !currentProjected = do
         let currentStreamVersion =

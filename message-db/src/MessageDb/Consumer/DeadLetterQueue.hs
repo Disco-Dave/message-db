@@ -24,7 +24,7 @@ writeToDlq
 writeToDlq connectionPool shouldWriteToDlq dlqStreamName subscriptionError =
   when (shouldWriteToDlq subscriptionError) $ do
     let record =
-          produceRecord dlqStreamName "SubscriptionErrorRecorded" subscriptionError
+          produceRecord dlqStreamName subscriptionError
 
     void . liftIO . Pool.withResource connectionPool $ \connection ->
       produce connection record

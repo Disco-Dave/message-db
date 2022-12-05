@@ -44,11 +44,13 @@ common shared
   default-extensions:
     AllowAmbiguousTypes
     BangPatterns
+    DataKinds
     DeriveFunctor
     DeriveGeneric
     DerivingVia
     FlexibleContexts
     GeneralizedNewtypeDeriving
+    KindSignatures
     LambdaCase
     NamedFieldPuns
     NumericUnderscores
@@ -130,7 +132,7 @@ library
     MessageDb.Consumer.HandlerKey
     MessageDb.Consumer.Projection
     MessageDb.Consumer.Projection.Error
-    MessageDb.Consumer.Projection.Handlers
+    MessageDb.Consumer.Projection.Projected
     MessageDb.Consumer.Snapshots
     MessageDb.Consumer.Subscription
     MessageDb.Consumer.Subscription.ConsumerGroup

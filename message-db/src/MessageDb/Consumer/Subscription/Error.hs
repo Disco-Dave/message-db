@@ -8,6 +8,7 @@ import Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import MessageDb.Consumer.Subscription.ErrorReason (SubscriptionErrorReason)
 import MessageDb.Message (UntypedMessage)
+import MessageDb.Message.MessageType (HasMessageType, MessageTypeIs (..))
 
 
 data SubscriptionError = SubscriptionError
@@ -15,6 +16,7 @@ data SubscriptionError = SubscriptionError
   , subscriptionErrorMessage :: UntypedMessage
   }
   deriving (Show)
+  deriving (HasMessageType) via (MessageTypeIs "MessageDb.SubscriptionError" SubscriptionError)
 
 
 instance Exception SubscriptionError
